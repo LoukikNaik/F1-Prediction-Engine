@@ -271,8 +271,8 @@ async function loadAll() {
       await loadLapData(null);
     }
 
-    // Load evolution in background
-    loadEvolution(season, round);
+    // Load evolution before rendering
+    await loadEvolution(season, round);
   } catch (e) {
     console.error("loadAll failed:", e);
     document.getElementById("mainContent").innerHTML =
@@ -462,11 +462,12 @@ function renderDashboard(lap) {
   document.getElementById("mainContent").innerHTML = html;
 
   // Render Plotly charts after DOM update
-  requestAnimationFrame(() => {
+  // Render Plotly charts then load driver evolution
+  requestAnimationFrame(async () => {
     renderWinProbChart(rows);
     renderHeatmap(rows);
     renderEvolutionCharts(lap);
-    if (availableLaps.length >= 2) loadDriverEvolution();
+    await loadDriverEvolution();
   });
 }
 
