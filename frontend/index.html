@@ -480,7 +480,10 @@ function metricCard(label, value) {
 
 function pct(v) {
   if (v == null || isNaN(v)) return "-";
-  return (v * 100).toFixed(1) + "%";
+  const p = v * 100;
+  if (p === 0) return "0.0%";
+  if (p > 0 && p < 0.1) return "<0.1%";
+  return p.toFixed(1) + "%";
 }
 
 function renderDriverTable(rows) {

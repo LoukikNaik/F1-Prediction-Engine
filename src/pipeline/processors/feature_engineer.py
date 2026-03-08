@@ -77,7 +77,7 @@ def add_team_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(["season", "round"])
 
     # Team reliability (DNF rate in recent races)
-    df["is_dnf"] = (~df["status"].isin(["Finished", "+1 Lap", "+2 Laps", "+3 Laps"])).astype(int)
+    df["is_dnf"] = (~df["status"].isin(["Finished", "+1 Lap", "+2 Laps", "+3 Laps", "Scheduled", "Pending"])).astype(int)
     df["team_reliability"] = (
         df.groupby("team_id")["is_dnf"]
         .transform(lambda x: x.shift(1).rolling(10, min_periods=1).mean())
