@@ -76,10 +76,11 @@ def _find_matrix_path(season: int, round_num: int, lap: int | None = None) -> Pa
         path = LIVE_PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_lap{lap}.parquet"
         if path.exists():
             return path
-    # Fallback to race_eve
-    path = PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_race_eve.parquet"
-    if path.exists():
-        return path
+    # Fallback through stages in priority order
+    for stage in ("race_eve", "post_sprint", "post_qualifying", "pre_weekend"):
+        path = PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_{stage}.parquet"
+        if path.exists():
+            return path
     return None
 
 
