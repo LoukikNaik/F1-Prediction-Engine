@@ -121,6 +121,31 @@ def get_matrix(
     if path is None:
         return JSONResponse({"error": "Matrix not found"}, status_code=404)
     df = pd.read_parquet(path)
+
+    # Inject any missing drivers (e.g. DNS) with zeroed-out probabilities
+    try:
+        from sqlalchemy import text as sql_text
+        from src.database.connection import get_session
+
+        with get_session() as session:
+            all_drivers = [r[0] for r in session.execute(sql_text("""
+                SELECT DISTINCT d.full_name
+                FROM results r
+                JOIN drivers d ON r.driver_id = d.id
+                JOIN races ra ON r.race_id = ra.id
+                WHERE ra.season = :season AND ra.round = :round
+            """), {"season": season, "round": round_num}).fetchall()]
+
+            missing = [d for d in all_drivers if d not in df.index]
+            if missing:
+                pos_cols = [c for c in df.columns if c.startswith("P")]
+                zero_row = {c: 0.0 for c in df.columns}
+                zero_row["expected_position"] = float(len(df) + 1)
+                for name in missing:
+                    df.loc[name] = zero_row
+    except Exception:
+        pass
+
     drivers = df.index.tolist()
     rows = _matrix_to_records(df)
     return JSONResponse({
