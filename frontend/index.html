@@ -706,6 +706,7 @@ function renderDashboard(lap) {
   html += renderDriverTable(rows);
   html += '</div><div class="section">';
   html += '<h3>Win Probabilities</h3><div id="chartWinProb"></div>';
+  html += '<h3 style="margin-top:16px">Podium Probabilities</h3><div id="chartPodiumProb"></div>';
   html += '</div></div><hr class="divider">';
 
   // --- Heatmap ---
@@ -746,6 +747,7 @@ function renderDashboard(lap) {
   // Render Plotly charts then load driver evolution
   requestAnimationFrame(async () => {
     renderWinProbChart(rows);
+    renderPodiumProbChart(rows);
     renderHeatmap(rows);
     renderEvolutionCharts(lap);
     await loadDriverEvolution();
@@ -862,6 +864,31 @@ function renderWinProbChart(rows) {
     height: 400,
     xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title: "Win Probability",
       range: [0, Math.max(...top10.map(r => r.win_prob)) * 1.25]},
+    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
+    margin: {l: 150, r: 70, t: 10, b: 40}
+  }, {responsive: true, displayModeBar: false});
+}
+
+function renderPodiumProbChart(rows) {
+  const el = document.getElementById("chartPodiumProb");
+  if (!el) return;
+  const top10 = [...rows].sort((a, b) => a.podium_prob - b.podium_prob).slice(-10);
+  const colors = top10.map(r => TEAM_COLORS[teamMapping[r.driver_name]] || "#888");
+
+  Plotly.newPlot(el, [{
+    type: "bar", orientation: "h",
+    x: top10.map(r => r.podium_prob),
+    y: top10.map(r => r.driver_name),
+    marker: {color: colors, line: {width: 0}},
+    text: top10.map(r => pct(r.podium_prob)),
+    textposition: "outside",
+    textfont: {size: 11},
+    hovertemplate: "%{y}: %{x:.1%}<extra></extra>"
+  }], {
+    ...PLOTLY_LAYOUT_BASE,
+    height: 400,
+    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title: "Podium Probability",
+      range: [0, Math.min(Math.max(...top10.map(r => r.podium_prob)) * 1.15, 1.05)]},
     yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
     margin: {l: 150, r: 70, t: 10, b: 40}
   }, {responsive: true, displayModeBar: false});
