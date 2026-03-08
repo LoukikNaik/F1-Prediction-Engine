@@ -10,101 +10,121 @@
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#0e1117;--surface:#1a1d24;--surface2:#262a33;--border:#333842;
-  --text:#fafafa;--text2:#a0a8b4;--accent:#ff4b4b;
+  --text:#fafafa;--text2:#a0a8b4;--accent:#e10600;
   --green:#22c55e;--red:#ef4444;--yellow:#eab308;
+  --sidebar-w:280px;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  background:var(--bg);color:var(--text);line-height:1.5;overflow-x:hidden}
+  background:var(--bg);color:var(--text);line-height:1.5;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased}
 a{color:var(--accent);text-decoration:none}
 
 /* ---------- Layout ---------- */
-.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
-.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 20px;
+.app{display:grid;grid-template-columns:var(--sidebar-w) 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:10px 20px;
   background:var(--surface);border-bottom:1px solid var(--border)}
-.topbar h1{font-size:1.1rem;white-space:nowrap}
+.topbar h1{font-size:1.05rem;white-space:nowrap;letter-spacing:-0.01em}
 .topbar .api-input{flex:1;max-width:420px;display:flex;gap:6px}
-.topbar input[type=text]{flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border);
-  background:var(--surface2);color:var(--text);font-size:0.85rem}
-.topbar button{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:0.85rem;
-  background:var(--accent);color:#fff;font-weight:600}
+.topbar input[type=text]{flex:1;padding:7px 12px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);font-size:0.85rem;transition:border-color .2s}
+.topbar input[type=text]:focus{border-color:var(--accent);outline:none}
+.topbar button{padding:7px 16px;border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;
+  background:var(--accent);color:#fff;font-weight:600;transition:opacity .15s}
 .topbar button:hover{opacity:0.85}
-.status-badge{padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600}
+.topbar button:active{transform:scale(0.97)}
+.status-badge{padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600;white-space:nowrap}
 .status-badge.ok{background:#166534;color:#86efac}
 .status-badge.err{background:#7f1d1d;color:#fca5a5}
+.menu-btn{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;
+  cursor:pointer;padding:4px 8px;border-radius:6px}
+.menu-btn:hover{background:var(--surface2)}
 
 .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:16px;
-  overflow-y:auto;max-height:calc(100vh - 52px)}
-.sidebar h3{font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text2);
-  margin:16px 0 8px}
+  overflow-y:auto;max-height:calc(100vh - 50px)}
+.sidebar h3{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);
+  margin:16px 0 6px;font-weight:700}
+.sidebar h3:first-child{margin-top:0}
 .sidebar label{display:block;font-size:0.82rem;color:var(--text2);margin-bottom:4px}
-.sidebar input[type=number],.sidebar select{width:100%;padding:6px 8px;border-radius:6px;
-  border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem;
-  margin-bottom:8px}
-.sidebar input[type=range]{width:100%;accent-color:var(--accent)}
-.sidebar .lap-label{font-size:0.82rem;color:var(--text2);text-align:center;margin-top:2px}
+.sidebar input[type=number],.sidebar select{width:100%;padding:7px 10px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.82rem;
+  margin-bottom:8px;transition:border-color .2s;appearance:none;-webkit-appearance:none}
+.sidebar select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a0a8b4' d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.sidebar input[type=number]:focus,.sidebar select:focus{border-color:var(--accent);outline:none}
+.sidebar input[type=range]{width:100%;accent-color:var(--accent);margin-top:4px}
+.sidebar .lap-label{font-size:0.78rem;color:var(--text2);text-align:center;margin-top:4px}
 
 /* ---------- Stage Toggle ---------- */
-.stage-toggle{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
-.stage-option{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;
-  font-size:0.82rem;cursor:pointer;transition:background 0.15s}
+.stage-toggle{display:flex;flex-direction:column;gap:2px;margin-bottom:12px}
+.stage-option{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;
+  font-size:0.82rem;cursor:pointer;transition:background 0.15s,opacity .15s;
+  border:1px solid transparent}
 .stage-option:hover{background:var(--surface2)}
-.stage-option input[type=radio]{accent-color:var(--accent);margin:0}
-.stage-option.disabled{opacity:0.35;pointer-events:none}
-.stage-option .stage-label{color:var(--text)}
+.stage-option input[type=radio]{accent-color:var(--accent);margin:0;flex-shrink:0;
+  width:14px;height:14px}
+.stage-option.active{background:var(--surface2);border-color:var(--border)}
+.stage-option.disabled{opacity:0.3;pointer-events:none}
+.stage-option .stage-label{color:var(--text);white-space:nowrap}
 .stage-option.disabled .stage-label{color:var(--text2)}
 .lap-section-hidden{display:none}
 
-.main{padding:20px;overflow-y:auto;max-height:calc(100vh - 52px)}
-.main h2{font-size:1.1rem;margin-bottom:12px;color:var(--text)}
+.main{padding:20px;overflow-y:auto;max-height:calc(100vh - 50px)}
+.main h2{font-size:1.05rem;margin-bottom:12px;color:var(--text);font-weight:700}
 .divider{border:none;border-top:1px solid var(--border);margin:20px 0}
 
 /* ---------- Status Row ---------- */
-.status-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
-.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  padding:12px 16px;min-width:140px;flex:1}
-.metric-card .label{font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em}
-.metric-card .value{font-size:1.3rem;font-weight:700;margin-top:2px}
+.status-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px}
+.metric-card .label{font-size:0.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em}
+.metric-card .value{font-size:1.2rem;font-weight:700;margin-top:4px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
 
 /* ---------- Podium ---------- */
-.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
-.podium-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:16px;text-align:center}
-.podium-card .medal{font-size:1.6rem}
-.podium-card .driver-name{font-size:1.15rem;font-weight:700;margin:6px 0 2px}
-.podium-card .team-name{font-size:0.82rem;margin-bottom:8px}
-.podium-card .prob-row{display:flex;justify-content:center;gap:20px}
-.podium-card .prob-item .plabel{font-size:0.7rem;color:var(--text2)}
-.podium-card .prob-item .pval{font-size:1.05rem;font-weight:600}
-.podium-card img{width:32px;height:32px;vertical-align:middle;margin-right:6px}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.podium-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px 12px;text-align:center;transition:border-color .2s}
+.podium-card:hover{border-color:var(--text2)}
+.podium-card .medal{font-size:1.5rem}
+.podium-card .driver-name{font-size:1rem;font-weight:700;margin:6px 0 2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.podium-card .team-name{font-size:0.78rem;margin-bottom:8px}
+.podium-card .prob-row{display:flex;justify-content:center;gap:16px}
+.podium-card .prob-item .plabel{font-size:0.68rem;color:var(--text2);text-transform:uppercase}
+.podium-card .prob-item .pval{font-size:1rem;font-weight:600}
+.podium-card img{width:28px;height:28px;vertical-align:middle;margin-right:4px}
 
 /* ---------- Two-column row ---------- */
 .row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-@media(max-width:900px){.row-2{grid-template-columns:1fr}}
 
 /* ---------- Driver table ---------- */
-.driver-table{width:100%;border-collapse:collapse;font-size:0.85rem}
-.driver-table th{text-align:left;padding:6px 8px;color:var(--text2);font-size:0.75rem;
-  text-transform:uppercase;border-bottom:1px solid var(--border)}
-.driver-table td{padding:6px 8px;border-bottom:1px solid var(--border)}
-.driver-table .pos{font-weight:700;color:var(--text2);width:36px}
-.driver-table .color-bar{width:4px;height:20px;border-radius:2px;display:inline-block;
-  vertical-align:middle;margin-right:6px}
-.driver-table img.team-logo{width:20px;height:20px;vertical-align:middle;margin-right:6px}
-.driver-table .team{color:var(--text2);font-size:0.8rem}
-.driver-table td.num{text-align:right}
+.driver-table{width:100%;border-collapse:collapse;font-size:0.82rem}
+.driver-table th{text-align:left;padding:8px;color:var(--text2);font-size:0.7rem;
+  text-transform:uppercase;letter-spacing:0.04em;border-bottom:2px solid var(--border)}
+.driver-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.driver-table tbody tr:hover{background:var(--surface2)}
+.driver-table .pos{font-weight:700;color:var(--text2);width:36px;text-align:center}
+.driver-table .color-bar{width:4px;height:18px;border-radius:2px;display:inline-block;
+  vertical-align:middle}
+.driver-table img.team-logo{width:20px;height:20px;vertical-align:middle;margin-right:4px}
+.driver-table .team{color:var(--text2);font-size:0.78rem;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.driver-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+.driver-table .driver-hover{white-space:nowrap}
 
 /* ---------- Section card ---------- */
-.section{background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:16px;margin-bottom:16px}
-.section h3{font-size:0.95rem;margin-bottom:10px}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px;margin-bottom:16px;overflow:hidden}
+.section h3{font-size:0.9rem;margin-bottom:12px;font-weight:700}
 
 /* ---------- Sidebar standings ---------- */
-.standings-row{display:flex;align-items:center;padding:3px 0;font-size:0.82rem}
-.standings-row .s-pos{color:var(--text2);min-width:22px;text-align:right;margin-right:6px}
-.standings-row .s-bar{width:3px;height:16px;border-radius:1px;margin-right:6px}
-.standings-row img{width:16px;height:16px;vertical-align:middle;margin-right:4px}
-.standings-row .s-name{flex:1}
-.standings-row .s-pts{color:var(--text2);margin-left:4px;font-size:0.78rem}
+.standings-row{display:flex;align-items:center;padding:4px 0;font-size:0.78rem;gap:4px}
+.standings-row .s-pos{color:var(--text2);min-width:20px;text-align:right;font-variant-numeric:tabular-nums}
+.standings-row .s-bar{width:3px;height:16px;border-radius:2px;flex-shrink:0}
+.standings-row img{width:14px;height:14px;flex-shrink:0}
+.standings-row .s-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.standings-row .s-pts{color:var(--text2);font-size:0.72rem;font-variant-numeric:tabular-nums;
+  white-space:nowrap;flex-shrink:0}
 
 /* ---------- Plotly overrides ---------- */
 .js-plotly-plot .plotly .modebar{top:2px!important;right:2px!important}
@@ -119,15 +139,15 @@ a{color:var(--accent);text-decoration:none}
 /* ---------- No-data ---------- */
 .no-data{text-align:center;color:var(--text2);padding:60px 20px}
 .no-data h2{margin-bottom:8px;color:var(--text)}
-.no-data code{background:var(--surface2);padding:4px 10px;border-radius:4px;font-size:0.85rem}
+.no-data code{background:var(--surface2);padding:4px 10px;border-radius:6px;font-size:0.85rem}
 
 /* ---------- Circuit History Tooltip ---------- */
 .driver-hover{cursor:pointer;position:relative}
 .circuit-tooltip{position:fixed;z-index:1000;background:var(--surface2);border:1px solid var(--border);
-  border-radius:8px;padding:12px;min-width:260px;max-width:340px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.5);pointer-events:none;font-size:0.8rem}
+  border-radius:10px;padding:12px 14px;min-width:260px;max-width:340px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);pointer-events:none;font-size:0.8rem}
 .circuit-tooltip h4{font-size:0.85rem;margin-bottom:8px;color:var(--accent)}
-.circuit-tooltip .ct-row{display:flex;justify-content:space-between;padding:2px 0;
+.circuit-tooltip .ct-row{display:flex;justify-content:space-between;padding:3px 0;
   border-bottom:1px solid var(--border)}
 .circuit-tooltip .ct-row:last-child{border-bottom:none}
 .circuit-tooltip .ct-label{color:var(--text2);min-width:50px}
@@ -136,6 +156,46 @@ a{color:var(--accent);text-decoration:none}
 .circuit-tooltip .ct-win{color:var(--green)}
 .circuit-tooltip .ct-podium{color:var(--yellow)}
 .circuit-tooltip .ct-none{color:var(--text2);font-style:italic;padding:8px 0}
+
+/* ---------- Mobile ---------- */
+@media(max-width:768px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+  .topbar{padding:10px 12px;gap:8px;flex-wrap:wrap}
+  .topbar h1{font-size:0.95rem}
+  .topbar .api-input{max-width:none;order:3;flex-basis:100%}
+  .menu-btn{display:block}
+  .sidebar{max-height:none;border-right:none;border-bottom:1px solid var(--border);
+    display:none;padding:12px 16px}
+  .sidebar.open{display:block}
+  .main{max-height:none;padding:16px 12px}
+  .podium{grid-template-columns:1fr;gap:10px}
+  .podium-card{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;
+    text-align:left;padding:12px 14px}
+  .podium-card .medal{font-size:1.3rem;grid-row:1/3}
+  .podium-card .driver-name{font-size:0.95rem;margin:0;grid-column:2}
+  .podium-card .team-name{margin:0;font-size:0.75rem;grid-column:2}
+  .podium-card .prob-row{grid-column:3;grid-row:1/3;gap:10px;flex-direction:column;align-items:flex-end}
+  .podium-card .prob-item{display:flex;gap:4px;align-items:baseline}
+  .podium-card .prob-item .plabel{font-size:0.65rem}
+  .podium-card .prob-item .pval{font-size:0.85rem}
+  .podium-card img{width:20px;height:20px}
+  .row-2{grid-template-columns:1fr}
+  .status-row{grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px}
+  .metric-card{padding:10px 12px}
+  .metric-card .value{font-size:1rem}
+  .driver-table{font-size:0.78rem}
+  .driver-table th,.driver-table td{padding:6px 4px}
+  .driver-table .team{max-width:80px;font-size:0.72rem}
+  .circuit-tooltip{display:none!important}
+  .section{padding:12px;border-radius:10px}
+}
+
+@media(max-width:480px){
+  .topbar h1{font-size:0.85rem}
+  .status-row{grid-template-columns:1fr 1fr}
+  .metric-card .value{font-size:0.95rem}
+  .podium-card .prob-row{flex-direction:column;gap:4px;align-items:flex-start}
+}
 </style>
 </head>
 <body>
@@ -143,6 +203,7 @@ a{color:var(--accent);text-decoration:none}
 <!-- ========== TOP BAR ========== -->
 <div class="app">
 <div class="topbar">
+  <button class="menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">☰</button>
   <h1>🏎️ F1 Prediction Engine</h1>
   <div class="api-input">
     <input type="text" id="apiUrl" placeholder="Backend URL (e.g. https://abc.ngrok-free.app)" />
@@ -346,6 +407,8 @@ async function onSeasonChange() {
 
 function onRoundChange() {
   updateStageToggle();
+  // Auto-close sidebar on mobile
+  if (window.innerWidth <= 768) document.querySelector(".sidebar").classList.remove("open");
   loadAll();
 }
 
@@ -398,12 +461,14 @@ function updateStageToggle() {
     if (radio) radio.checked = true;
   }
 
+  updateStageActiveClass();
   toggleLapSection();
 }
 
 function onStageChange() {
   const checked = document.querySelector('input[name="stage"]:checked');
   if (checked) currentStage = checked.value;
+  updateStageActiveClass();
   toggleLapSection();
   loadStageData();
 }
@@ -703,7 +768,7 @@ function pct(v) {
 }
 
 function renderDriverTable(rows) {
-  let html = '<table class="driver-table"><thead><tr>';
+  let html = '<div style="overflow-x:auto"><table class="driver-table"><thead><tr>';
   html += '<th>POS</th><th></th><th></th><th>DRIVER</th><th>TEAM</th><th style="text-align:right">PRED</th><th style="text-align:right">WIN %</th>';
   html += '</tr></thead><tbody>';
 
@@ -747,7 +812,7 @@ function renderDriverTable(rows) {
       <td class="num">${winLabel}</td>
     </tr>`;
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   return html;
 }
 
@@ -787,16 +852,18 @@ function renderWinProbChart(rows) {
     type: "bar", orientation: "h",
     x: top10.map(r => r.win_prob),
     y: top10.map(r => r.driver_name),
-    marker: {color: colors},
+    marker: {color: colors, line: {width: 0}},
     text: top10.map(r => pct(r.win_prob)),
     textposition: "outside",
+    textfont: {size: 11},
     hovertemplate: "%{y}: %{x:.1%}<extra></extra>"
   }], {
     ...PLOTLY_LAYOUT_BASE,
     height: 400,
-    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title: "Win Probability"},
+    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title: "Win Probability",
+      range: [0, Math.max(...top10.map(r => r.win_prob)) * 1.25]},
     yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
-    margin: {l: 140, r: 60, t: 10, b: 40}
+    margin: {l: 150, r: 70, t: 10, b: 40}
   }, {responsive: true, displayModeBar: false});
 }
 
@@ -1049,6 +1116,20 @@ async function showCircuitTooltip(event) {
 
 function hideCircuitTooltip() {
   if (tooltipEl) tooltipEl.style.display = "none";
+}
+
+/* ================================================================
+   MOBILE SIDEBAR
+   ================================================================ */
+function toggleSidebar() {
+  document.querySelector(".sidebar").classList.toggle("open");
+}
+
+function updateStageActiveClass() {
+  document.querySelectorAll(".stage-option").forEach(opt => {
+    opt.classList.toggle("active",
+      opt.dataset.stage === currentStage && !opt.classList.contains("disabled"));
+  });
 }
 
 /* ================================================================
