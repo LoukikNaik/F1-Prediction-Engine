@@ -203,6 +203,7 @@ let currentMatrix = null;
 let currentSnapshots = null;
 let teamMapping = {};
 let standingsData = [];
+let standingsSeason = 2026;
 let evolutionData = [];
 
 /* ================================================================
@@ -268,6 +269,7 @@ async function loadAll() {
     availableLaps = lapsRes.laps || [];
     teamMapping = teamsRes.mapping || {};
     standingsData = standingsRes.records || [];
+    standingsSeason = standingsRes.season || season;
 
     renderSidebarStandings();
     setupLapSlider();
@@ -359,7 +361,11 @@ async function loadEvolution(season, round) {
 function renderSidebarStandings() {
   const el = document.getElementById("sidebarStandings");
   if (!standingsData.length) { el.innerHTML = ""; return; }
-  let html = '<h3>Championship Standings</h3>';
+  const season = +document.getElementById("season").value;
+  const label = standingsSeason < season
+    ? `${standingsSeason} Final Standings`
+    : "Championship Standings";
+  let html = `<h3>${label}</h3>`;
   standingsData.forEach(s => {
     const team = teamMapping[s.driver_name] || "";
     const color = TEAM_COLORS[team] || "#888";

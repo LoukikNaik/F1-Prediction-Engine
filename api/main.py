@@ -186,17 +186,19 @@ def get_standings(
         from src.database.queries import get_standings_df
 
         with get_session() as session:
+            source_season = season
             df = get_standings_df(session, season, "driver")
             if df.empty:
-                df = get_standings_df(session, season - 1, "driver")
+                source_season = season - 1
+                df = get_standings_df(session, source_season, "driver")
             if df.empty:
-                return JSONResponse({"records": []})
+                return JSONResponse({"records": [], "season": season})
             latest = df[df["round"] == df["round"].max()]
             records = latest[["driver_name", "driver_code", "position", "points"]].to_dict("records")
             for rec in records:
                 for k, v in list(rec.items()):
                     rec[k] = _to_json_safe(v)
-            return JSONResponse({"records": records})
+            return JSONResponse({"records": records, "season": source_season})
     except Exception as e:
         return JSONResponse({"records": [], "error": str(e)})
 
