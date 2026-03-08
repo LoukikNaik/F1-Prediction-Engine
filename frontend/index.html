@@ -700,8 +700,6 @@ async function loadDriverEvolution() {
   const round = +document.getElementById("roundNum").value;
   const team = teamMapping[driver] || "";
 
-  el.innerHTML = '<div class="loading"><span class="spin"></span>Loading...</div>';
-
   try {
     const res = await apiFetch(`/api/driver-evolution?season=${season}&round=${round}&driver=${encodeURIComponent(driver)}`);
     const records = res.records || [];
