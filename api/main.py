@@ -155,6 +155,33 @@ def get_matrix(
     })
 
 
+@app.get("/api/driver-evolution")
+def get_driver_evolution(
+    season: int = Query(...),
+    round_num: int = Query(..., alias="round"),
+    driver: str = Query(...),
+) -> JSONResponse:
+    """Return a single driver's position probabilities across all laps."""
+    pattern = f"matrix_{season}_r{round_num}_lap*.parquet"
+    files = sorted(LIVE_PREDICTIONS_DIR.glob(pattern))
+    records = []
+    for f in files:
+        try:
+            lap = int(f.stem.split("_lap")[-1])
+        except ValueError:
+            continue
+        df = pd.read_parquet(f)
+        if driver not in df.index:
+            continue
+        row = df.loc[driver]
+        rec: dict = {"lap": lap}
+        for col in df.columns:
+            rec[col] = _to_json_safe(row[col])
+        records.append(rec)
+    records.sort(key=lambda r: r["lap"])
+    return JSONResponse({"driver": driver, "records": records})
+
+
 @app.get("/api/evolution")
 def get_evolution(
     season: int = Query(...),

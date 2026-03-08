@@ -446,6 +446,19 @@ function renderDashboard(lap) {
   html += '<div id="chartEvoPos" style="margin-top:16px"></div>';
   html += '</div>';
 
+  // --- Driver Position Probabilities Over Laps ---
+  html += '<hr class="divider"><div class="section">';
+  html += '<h3>Driver Position Probabilities Over Laps</h3>';
+  html += '<div style="margin-bottom:12px"><label style="font-size:0.85rem;color:var(--text2);margin-right:8px">Driver:</label>';
+  html += '<select id="driverEvoSelect" onchange="loadDriverEvolution()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem">';
+  rows.forEach(r => {
+    const selected = r.driver_name === rows[0].driver_name ? " selected" : "";
+    html += `<option value="${r.driver_name}"${selected}>${r.driver_name}</option>`;
+  });
+  html += '</select></div>';
+  html += '<div id="chartDriverEvo"></div>';
+  html += '</div>';
+
   document.getElementById("mainContent").innerHTML = html;
 
   // Render Plotly charts after DOM update
@@ -453,6 +466,7 @@ function renderDashboard(lap) {
     renderWinProbChart(rows);
     renderHeatmap(rows);
     renderEvolutionCharts(lap);
+    if (availableLaps.length >= 2) loadDriverEvolution();
   });
 }
 
@@ -669,6 +683,63 @@ function renderEvolutionCharts(selectedLap) {
       legend: {font: {size: 10}},
       margin: {l: 60, r: 20, t: 50, b: 40}
     }, {responsive: true, displayModeBar: false});
+  }
+}
+
+/* ================================================================
+   DRIVER POSITION EVOLUTION
+   ================================================================ */
+async function loadDriverEvolution() {
+  const selectEl = document.getElementById("driverEvoSelect");
+  const el = document.getElementById("chartDriverEvo");
+  if (!selectEl || !el) return;
+
+  const driver = selectEl.value;
+  const season = +document.getElementById("season").value;
+  const round = +document.getElementById("roundNum").value;
+  const team = teamMapping[driver] || "";
+
+  el.innerHTML = '<div class="loading"><span class="spin"></span>Loading...</div>';
+
+  try {
+    const res = await apiFetch(`/api/driver-evolution?season=${season}&round=${round}&driver=${encodeURIComponent(driver)}`);
+    const records = res.records || [];
+    if (!records.length) {
+      el.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">No lap data for this driver.</div>';
+      return;
+    }
+
+    // Find which position columns exist
+    const posCols = [];
+    for (let i = 1; i <= 10; i++) if (records[0][`P${i}`] !== undefined) posCols.push(`P${i}`);
+
+    const colorScale = [
+      "#FFD700","#C0C0C0","#CD7F32","#22c55e","#3b82f6",
+      "#8b5cf6","#ec4899","#f97316","#06b6d4","#84cc16"
+    ];
+
+    const traces = posCols.map((col, idx) => ({
+      x: records.map(r => r.lap),
+      y: records.map(r => r[col] || 0),
+      name: col,
+      type: "scatter",
+      mode: "lines+markers",
+      line: {color: colorScale[idx] || "#888", width: 2},
+      marker: {size: 4},
+      hovertemplate: `${col}<br>Lap %{x}: %{y:.1%}<extra></extra>`
+    }));
+
+    Plotly.newPlot(el, traces, {
+      ...PLOTLY_LAYOUT_BASE,
+      title: {text: `${driver} — Position Probabilities Over Laps`, font: {size: 13, color: "#a0a8b4"}},
+      height: 420,
+      xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Lap"},
+      yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, tickformat: ".0%", title: "Probability"},
+      legend: {font: {size: 10}},
+      margin: {l: 60, r: 20, t: 50, b: 40}
+    }, {responsive: true, displayModeBar: false});
+  } catch (e) {
+    el.innerHTML = `<div style="color:var(--text2);padding:20px">Failed: ${e.message}</div>`;
   }
 }
 
