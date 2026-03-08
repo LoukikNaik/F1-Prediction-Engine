@@ -95,16 +95,6 @@ a{color:var(--accent);text-decoration:none}
 .standings-row .s-name{flex:1}
 .standings-row .s-pts{color:var(--text2);margin-left:4px;font-size:0.78rem}
 
-/* ---------- Comparison ---------- */
-.compare-controls{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
-.compare-controls select{padding:6px 8px;border-radius:6px;border:1px solid var(--border);
-  background:var(--surface2);color:var(--text);font-size:0.85rem}
-.compare-table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:12px}
-.compare-table th{text-align:left;padding:6px;color:var(--text2);font-size:0.72rem;
-  text-transform:uppercase;border-bottom:1px solid var(--border)}
-.compare-table td{padding:6px;border-bottom:1px solid var(--border)}
-.delta-pos{color:var(--green)}.delta-neg{color:var(--red)}
-
 /* ---------- Plotly overrides ---------- */
 .js-plotly-plot .plotly .modebar{top:2px!important;right:2px!important}
 
@@ -449,20 +439,6 @@ function renderDashboard(lap) {
   html += renderFullTable(rows);
   html += '</div>';
 
-  // --- Lap Comparison ---
-  if (availableLaps.length >= 2) {
-    html += '<hr class="divider"><div class="section" id="comparisonSection">';
-    html += '<h3>Lap Comparison</h3>';
-    html += '<div class="compare-controls"><label>Compare with: </label><select id="compareLap" onchange="loadComparison()">';
-    const currentLap = lap;
-    availableLaps.forEach(l => {
-      if (l !== currentLap) html += `<option value="${l}">Lap ${l}</option>`;
-    });
-    html += '</select></div>';
-    html += '<div id="comparisonContent"><div class="loading"><span class="spin"></span>Select a lap to compare</div></div>';
-    html += '</div>';
-  }
-
   // --- Evolution ---
   html += '<hr class="divider"><div class="section">';
   html += '<h3>Prediction Evolution</h3>';
@@ -477,7 +453,6 @@ function renderDashboard(lap) {
     renderWinProbChart(rows);
     renderHeatmap(rows);
     renderEvolutionCharts(lap);
-    if (availableLaps.length >= 2) loadComparison();
   });
 }
 
@@ -694,163 +669,6 @@ function renderEvolutionCharts(selectedLap) {
       legend: {font: {size: 10}},
       margin: {l: 60, r: 20, t: 50, b: 40}
     }, {responsive: true, displayModeBar: false});
-  }
-}
-
-/* ================================================================
-   LAP COMPARISON
-   ================================================================ */
-async function loadComparison() {
-  const selectEl = document.getElementById("compareLap");
-  if (!selectEl) return;
-  const compareLap = +selectEl.value;
-  const contentEl = document.getElementById("comparisonContent");
-  if (!contentEl) return;
-
-  const season = +document.getElementById("season").value;
-  const round = +document.getElementById("roundNum").value;
-  const currentLap = availableLaps[+document.getElementById("lapSlider").value] || availableLaps[availableLaps.length - 1];
-
-  contentEl.innerHTML = '<div class="loading"><span class="spin"></span>Loading comparison...</div>';
-
-  try {
-    const cmpRes = await apiFetch(`/api/matrix?season=${season}&round=${round}&lap=${compareLap}`);
-    if (!cmpRes.rows || !currentMatrix.rows) return;
-
-    const currentRows = currentMatrix.rows;
-    const prevRows = cmpRes.rows;
-
-    // Build lookup
-    const prevMap = {};
-    prevRows.forEach(r => prevMap[r.driver_name] = r);
-
-    // Merge and compute deltas
-    const merged = currentRows.map(r => {
-      const prev = prevMap[r.driver_name] || {win_prob: 0, expected_position: 20};
-      return {
-        driver_name: r.driver_name,
-        win_prob_now: r.win_prob || 0,
-        win_prob_prev: prev.win_prob || 0,
-        win_prob_delta: (r.win_prob || 0) - (prev.win_prob || 0),
-        exp_pos_now: r.expected_position || 20,
-        exp_pos_prev: prev.expected_position || 20,
-        pos_delta: (prev.expected_position || 20) - (r.expected_position || 20)
-      };
-    }).sort((a, b) => b.win_prob_now - a.win_prob_now).slice(0, 15);
-
-    let html = '<div class="row-2">';
-
-    // Win % change chart
-    html += '<div><div id="chartDeltaWin"></div></div>';
-    // Position change chart
-    html += '<div><div id="chartDeltaPos"></div></div>';
-    html += '</div>';
-
-    // Comparison table
-    html += '<table class="compare-table"><thead><tr>';
-    html += `<th>DRIVER</th><th>Win % (Lap ${compareLap})</th><th>Win % (Lap ${currentLap})</th><th>Change</th>`;
-    html += `<th>Exp Pos (Lap ${compareLap})</th><th>Exp Pos (Lap ${currentLap})</th><th>Pos Change</th>`;
-    html += '</tr></thead><tbody>';
-    merged.forEach(m => {
-      const winDeltaCls = m.win_prob_delta > 0.001 ? "delta-pos" : m.win_prob_delta < -0.001 ? "delta-neg" : "";
-      const posDeltaCls = m.pos_delta > 0.001 ? "delta-pos" : m.pos_delta < -0.001 ? "delta-neg" : "";
-      html += `<tr>
-        <td>${m.driver_name}</td>
-        <td class="num">${pct(m.win_prob_prev)}</td>
-        <td class="num">${pct(m.win_prob_now)}</td>
-        <td class="num ${winDeltaCls}">${m.win_prob_delta > 0 ? "+" : ""}${pct(m.win_prob_delta)}</td>
-        <td class="num">${m.exp_pos_prev.toFixed(1)}</td>
-        <td class="num">${m.exp_pos_now.toFixed(1)}</td>
-        <td class="num ${posDeltaCls}">${m.pos_delta > 0 ? "+" : ""}${m.pos_delta.toFixed(1)}</td>
-      </tr>`;
-    });
-    html += '</tbody></table>';
-
-    // Side-by-side heatmaps
-    html += '<div class="row-2" style="margin-top:16px">';
-    html += `<div><div id="chartHmPrev"></div></div>`;
-    html += `<div><div id="chartHmCur"></div></div>`;
-    html += '</div>';
-
-    contentEl.innerHTML = html;
-
-    // Render delta charts
-    requestAnimationFrame(() => {
-      // Win delta bar chart
-      const sortedByDelta = [...merged].sort((a, b) => a.win_prob_delta - b.win_prob_delta);
-      Plotly.newPlot("chartDeltaWin", [{
-        type: "bar", orientation: "h",
-        x: sortedByDelta.map(m => m.win_prob_delta),
-        y: sortedByDelta.map(m => m.driver_name),
-        marker: {color: sortedByDelta.map(m => m.win_prob_delta < 0 ? "#ef4444" : "#22c55e")},
-        text: sortedByDelta.map(m => (m.win_prob_delta > 0 ? "+" : "") + pct(m.win_prob_delta)),
-        textposition: "outside",
-        hovertemplate: "%{y}: %{x:+.1%}<extra></extra>"
-      }], {
-        ...PLOTLY_LAYOUT_BASE,
-        title: {text: `Win % Change (Lap ${compareLap} → ${currentLap})`, font: {size: 12, color: "#a0a8b4"}},
-        height: 420,
-        xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%"},
-        yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
-        margin: {l: 140, r: 60, t: 40, b: 30}
-      }, {responsive: true, displayModeBar: false});
-
-      // Position delta bar chart
-      const sortedByPos = [...merged].sort((a, b) => b.pos_delta - a.pos_delta);
-      Plotly.newPlot("chartDeltaPos", [{
-        type: "bar", orientation: "h",
-        x: sortedByPos.map(m => m.pos_delta),
-        y: sortedByPos.map(m => m.driver_name),
-        marker: {color: sortedByPos.map(m => m.pos_delta > 0 ? "#22c55e" : m.pos_delta < 0 ? "#ef4444" : "#6b7280")},
-        text: sortedByPos.map(m => (m.pos_delta > 0 ? "+" : "") + m.pos_delta.toFixed(1)),
-        textposition: "outside",
-        hovertemplate: "%{y}: %{x:+.1f} positions<extra></extra>"
-      }], {
-        ...PLOTLY_LAYOUT_BASE,
-        title: {text: `Exp Position Change (Lap ${compareLap} → ${currentLap})`, font: {size: 12, color: "#a0a8b4"}},
-        height: 420,
-        xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Positions gained"},
-        yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
-        margin: {l: 140, r: 60, t: 40, b: 30}
-      }, {responsive: true, displayModeBar: false});
-
-      // Side-by-side heatmaps
-      const posCols = [];
-      for (let i = 1; i <= 22; i++) if (currentRows[0][`P${i}`] !== undefined) posCols.push(`P${i}`);
-      const topNames = merged.map(m => m.driver_name);
-
-      const prevHmData = topNames.map(name => {
-        const row = prevMap[name] || {};
-        return posCols.map(c => row[c] || 0);
-      });
-      const curHmData = topNames.map(name => {
-        const row = currentRows.find(r => r.driver_name === name) || {};
-        return posCols.map(c => row[c] || 0);
-      });
-
-      const hmLayout = (title) => ({
-        ...PLOTLY_LAYOUT_BASE,
-        title: {text: title, font: {size: 12, color: "#a0a8b4"}},
-        height: 420,
-        xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Position", dtick: 1},
-        yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true, autorange: "reversed"},
-        margin: {l: 140, r: 20, t: 40, b: 40}
-      });
-
-      Plotly.newPlot("chartHmPrev", [{
-        type: "heatmap", z: prevHmData, x: posCols, y: topNames,
-        colorscale: "YlOrRd", zmin: 0, zmax: 1,
-        hovertemplate: "%{y}<br>%{x}: %{z:.1%}<extra></extra>"
-      }], hmLayout(`Position Probabilities — Lap ${compareLap}`), {responsive: true, displayModeBar: false});
-
-      Plotly.newPlot("chartHmCur", [{
-        type: "heatmap", z: curHmData, x: posCols, y: topNames,
-        colorscale: "YlOrRd", zmin: 0, zmax: 1,
-        hovertemplate: "%{y}<br>%{x}: %{z:.1%}<extra></extra>"
-      }], hmLayout(`Position Probabilities — Lap ${currentLap}`), {responsive: true, displayModeBar: false});
-    });
-  } catch (e) {
-    contentEl.innerHTML = `<div style="color:var(--text2);padding:20px">Comparison failed: ${e.message}</div>`;
   }
 }
 
