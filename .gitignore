@@ -1,0 +1,35 @@
+# Data
+data/raw/
+data/processed/
+data/*.db
+*.parquet
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Models
+models/trained/*.pkl
+models/trained/*.joblib
+
+# Environment
+.env
+.env.*
+
+# Claude Code
+.claude/settings.local.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

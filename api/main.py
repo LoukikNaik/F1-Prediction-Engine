@@ -1,0 +1,244 @@
+"""FastAPI backend for F1 Prediction Engine dashboard."""
+
+import sys
+from pathlib import Path
+
+# Ensure project root is importable
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import numpy as np
+import pandas as pd
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from config.settings import LIVE_PREDICTIONS_DIR, PREDICTIONS_DIR
+
+app = FastAPI(title="F1 Prediction Engine API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://f1.loukik.dev",
+        "http://localhost:8000",
+        "http://localhost:3000",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "null",  # local file:// origin
+    ],
+    allow_origin_regex=r"http://localhost:\d+",
+    allow_credentials=True,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _to_json_safe(val):
+    """Convert a single value to a JSON-serialisable Python type."""
+    if pd.isna(val):
+        return None
+    if isinstance(val, (bool, np.bool_)):
+        return bool(val)
+    if isinstance(val, (np.integer,)):
+        return int(val)
+    if isinstance(val, (np.floating,)):
+        return round(float(val), 6)
+    if isinstance(val, float):
+        return round(val, 6)
+    if isinstance(val, int):
+        return val
+    if hasattr(val, "isoformat"):
+        return val.isoformat()
+    return str(val)
+
+
+def _matrix_to_records(df: pd.DataFrame) -> list[dict]:
+    """Convert a prediction matrix DataFrame to JSON-friendly records."""
+    records = []
+    pos_cols = [f"P{i}" for i in range(1, 23) if f"P{i}" in df.columns]
+    summary_cols = [c for c in ("expected_position", "win_prob", "podium_prob", "top5_prob") if c in df.columns]
+    for driver_name in df.index:
+        row = df.loc[driver_name]
+        rec: dict = {"driver_name": driver_name}
+        for col in pos_cols + summary_cols:
+            rec[col] = _to_json_safe(row[col])
+        records.append(rec)
+    return records
+
+
+def _find_matrix_path(season: int, round_num: int, lap: int | None = None) -> Path | None:
+    """Locate a prediction matrix parquet file."""
+    if lap is not None:
+        path = LIVE_PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_lap{lap}.parquet"
+        if path.exists():
+            return path
+    # Fallback to race_eve
+    path = PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_race_eve.parquet"
+    if path.exists():
+        return path
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+@app.get("/api/laps")
+def get_laps(
+    season: int = Query(...),
+    round_num: int = Query(..., alias="round"),
+) -> dict:
+    """Return available lap numbers that have prediction snapshots."""
+    pattern = f"matrix_{season}_r{round_num}_lap*.parquet"
+    files = sorted(LIVE_PREDICTIONS_DIR.glob(pattern))
+    laps: list[int] = []
+    for f in files:
+        try:
+            lap = int(f.stem.split("_lap")[-1])
+            laps.append(lap)
+        except ValueError:
+            continue
+    return {"laps": sorted(laps)}
+
+
+@app.get("/api/matrix")
+def get_matrix(
+    season: int = Query(...),
+    round_num: int = Query(..., alias="round"),
+    lap: int | None = Query(None),
+) -> JSONResponse:
+    """Return the prediction matrix for a given lap (or race_eve fallback)."""
+    path = _find_matrix_path(season, round_num, lap)
+    if path is None:
+        return JSONResponse({"error": "Matrix not found"}, status_code=404)
+    df = pd.read_parquet(path)
+    drivers = df.index.tolist()
+    rows = _matrix_to_records(df)
+    return JSONResponse({
+        "lap": lap,
+        "drivers": drivers,
+        "rows": rows,
+    })
+
+
+@app.get("/api/evolution")
+def get_evolution(
+    season: int = Query(...),
+    round_num: int = Query(..., alias="round"),
+) -> JSONResponse:
+    """Return prediction evolution data across laps."""
+    path = LIVE_PREDICTIONS_DIR / f"evolution_{season}_r{round_num}.parquet"
+    if not path.exists():
+        return JSONResponse({"records": []})
+    df = pd.read_parquet(path)
+    records = []
+    for _, row in df.iterrows():
+        rec: dict = {}
+        for col in df.columns:
+            rec[col] = _to_json_safe(row[col])
+        records.append(rec)
+    return JSONResponse({"records": records})
+
+
+@app.get("/api/snapshots")
+def get_snapshots(
+    season: int = Query(...),
+    round_num: int = Query(..., alias="round"),
+    lap: int | None = Query(None),
+) -> JSONResponse:
+    """Return live prediction snapshots from the database."""
+    try:
+        from src.database.connection import get_session
+        from src.database.queries import get_live_snapshots, get_race
+
+        with get_session() as session:
+            race = get_race(session, season, round_num)
+            if not race:
+                return JSONResponse({"records": []})
+            df = get_live_snapshots(session, race.id, lap_number=lap)
+            if df.empty:
+                return JSONResponse({"records": []})
+            records = df.to_dict("records")
+            for rec in records:
+                for k, v in list(rec.items()):
+                    rec[k] = _to_json_safe(v)
+            return JSONResponse({"records": records})
+    except Exception as e:
+        return JSONResponse({"records": [], "error": str(e)})
+
+
+@app.get("/api/standings")
+def get_standings(
+    season: int = Query(...),
+) -> JSONResponse:
+    """Return championship standings for a season."""
+    try:
+        from src.database.connection import get_session
+        from src.database.queries import get_standings_df
+
+        with get_session() as session:
+            df = get_standings_df(session, season, "driver")
+            if df.empty:
+                df = get_standings_df(session, season - 1, "driver")
+            if df.empty:
+                return JSONResponse({"records": []})
+            latest = df[df["round"] == df["round"].max()]
+            records = latest[["driver_name", "driver_code", "position", "points"]].to_dict("records")
+            for rec in records:
+                for k, v in list(rec.items()):
+                    rec[k] = _to_json_safe(v)
+            return JSONResponse({"records": records})
+    except Exception as e:
+        return JSONResponse({"records": [], "error": str(e)})
+
+
+@app.get("/api/teams")
+def get_teams(
+    season: int = Query(...),
+) -> JSONResponse:
+    """Return driver -> team mapping for a season."""
+    try:
+        from sqlalchemy import text as sql_text
+
+        from src.database.connection import get_session
+
+        with get_session() as session:
+            rows = session.execute(sql_text("""
+                SELECT d.full_name, t.name
+                FROM results r
+                JOIN drivers d ON r.driver_id = d.id
+                JOIN teams t ON r.team_id = t.id
+                JOIN races ra ON r.race_id = ra.id
+                WHERE ra.season = :season
+                ORDER BY ra.round DESC
+            """), {"season": season}).fetchall()
+            mapping: dict[str, str] = {}
+            for name, team in rows:
+                if name not in mapping:
+                    mapping[name] = team
+            if not mapping:
+                # Fallback to previous season
+                rows = session.execute(sql_text("""
+                    SELECT d.full_name, t.name
+                    FROM results r
+                    JOIN drivers d ON r.driver_id = d.id
+                    JOIN teams t ON r.team_id = t.id
+                    JOIN races ra ON r.race_id = ra.id
+                    WHERE ra.season = :season
+                    ORDER BY ra.round DESC
+                """), {"season": season - 1}).fetchall()
+                for name, team in rows:
+                    if name not in mapping:
+                        mapping[name] = team
+            return JSONResponse({"mapping": mapping})
+    except Exception as e:
+        return JSONResponse({"mapping": {}, "error": str(e)})

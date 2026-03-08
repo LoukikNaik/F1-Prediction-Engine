@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>F1 Prediction Engine</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+/* ---------- Reset & Theme ---------- */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0e1117;--surface:#1a1d24;--surface2:#262a33;--border:#333842;
+  --text:#fafafa;--text2:#a0a8b4;--accent:#ff4b4b;
+  --green:#22c55e;--red:#ef4444;--yellow:#eab308;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.5;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+
+/* ---------- Layout ---------- */
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:var(--surface);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:1.1rem;white-space:nowrap}
+.topbar .api-input{flex:1;max-width:420px;display:flex;gap:6px}
+.topbar input[type=text]{flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);font-size:0.85rem}
+.topbar button{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:0.85rem;
+  background:var(--accent);color:#fff;font-weight:600}
+.topbar button:hover{opacity:0.85}
+.status-badge{padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:600}
+.status-badge.ok{background:#166534;color:#86efac}
+.status-badge.err{background:#7f1d1d;color:#fca5a5}
+
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:16px;
+  overflow-y:auto;max-height:calc(100vh - 52px)}
+.sidebar h3{font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text2);
+  margin:16px 0 8px}
+.sidebar label{display:block;font-size:0.82rem;color:var(--text2);margin-bottom:4px}
+.sidebar input[type=number],.sidebar select{width:100%;padding:6px 8px;border-radius:6px;
+  border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem;
+  margin-bottom:8px}
+.sidebar input[type=range]{width:100%;accent-color:var(--accent)}
+.sidebar .lap-label{font-size:0.82rem;color:var(--text2);text-align:center;margin-top:2px}
+
+.main{padding:20px;overflow-y:auto;max-height:calc(100vh - 52px)}
+.main h2{font-size:1.1rem;margin-bottom:12px;color:var(--text)}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* ---------- Status Row ---------- */
+.status-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:12px 16px;min-width:140px;flex:1}
+.metric-card .label{font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em}
+.metric-card .value{font-size:1.3rem;font-weight:700;margin-top:2px}
+
+/* ---------- Podium ---------- */
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+.podium-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px;text-align:center}
+.podium-card .medal{font-size:1.6rem}
+.podium-card .driver-name{font-size:1.15rem;font-weight:700;margin:6px 0 2px}
+.podium-card .team-name{font-size:0.82rem;margin-bottom:8px}
+.podium-card .prob-row{display:flex;justify-content:center;gap:20px}
+.podium-card .prob-item .plabel{font-size:0.7rem;color:var(--text2)}
+.podium-card .prob-item .pval{font-size:1.05rem;font-weight:600}
+.podium-card img{width:32px;height:32px;vertical-align:middle;margin-right:6px}
+
+/* ---------- Two-column row ---------- */
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.row-2{grid-template-columns:1fr}}
+
+/* ---------- Driver table ---------- */
+.driver-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+.driver-table th{text-align:left;padding:6px 8px;color:var(--text2);font-size:0.75rem;
+  text-transform:uppercase;border-bottom:1px solid var(--border)}
+.driver-table td{padding:6px 8px;border-bottom:1px solid var(--border)}
+.driver-table .pos{font-weight:700;color:var(--text2);width:36px}
+.driver-table .color-bar{width:4px;height:20px;border-radius:2px;display:inline-block;
+  vertical-align:middle;margin-right:6px}
+.driver-table img.team-logo{width:20px;height:20px;vertical-align:middle;margin-right:6px}
+.driver-table .team{color:var(--text2);font-size:0.8rem}
+.driver-table td.num{text-align:right}
+
+/* ---------- Section card ---------- */
+.section{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:16px;margin-bottom:16px}
+.section h3{font-size:0.95rem;margin-bottom:10px}
+
+/* ---------- Sidebar standings ---------- */
+.standings-row{display:flex;align-items:center;padding:3px 0;font-size:0.82rem}
+.standings-row .s-pos{color:var(--text2);min-width:22px;text-align:right;margin-right:6px}
+.standings-row .s-bar{width:3px;height:16px;border-radius:1px;margin-right:6px}
+.standings-row img{width:16px;height:16px;vertical-align:middle;margin-right:4px}
+.standings-row .s-name{flex:1}
+.standings-row .s-pts{color:var(--text2);margin-left:4px;font-size:0.78rem}
+
+/* ---------- Comparison ---------- */
+.compare-controls{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.compare-controls select{padding:6px 8px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text);font-size:0.85rem}
+.compare-table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:12px}
+.compare-table th{text-align:left;padding:6px;color:var(--text2);font-size:0.72rem;
+  text-transform:uppercase;border-bottom:1px solid var(--border)}
+.compare-table td{padding:6px;border-bottom:1px solid var(--border)}
+.delta-pos{color:var(--green)}.delta-neg{color:var(--red)}
+
+/* ---------- Plotly overrides ---------- */
+.js-plotly-plot .plotly .modebar{top:2px!important;right:2px!important}
+
+/* ---------- Loading ---------- */
+.loading{text-align:center;color:var(--text2);padding:40px;font-size:0.9rem}
+.spin{display:inline-block;width:20px;height:20px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;
+  margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- No-data ---------- */
+.no-data{text-align:center;color:var(--text2);padding:60px 20px}
+.no-data h2{margin-bottom:8px;color:var(--text)}
+.no-data code{background:var(--surface2);padding:4px 10px;border-radius:4px;font-size:0.85rem}
+</style>
+</head>
+<body>
+
+<!-- ========== TOP BAR ========== -->
+<div class="app">
+<div class="topbar">
+  <h1>🏎️ F1 Prediction Engine</h1>
+  <div class="api-input">
+    <input type="text" id="apiUrl" placeholder="Backend URL (e.g. https://abc.ngrok-free.app)" />
+    <button onclick="connect()">Connect</button>
+  </div>
+  <span id="statusBadge" class="status-badge err">Disconnected</span>
+</div>
+
+<!-- ========== SIDEBAR ========== -->
+<div class="sidebar">
+  <h3>Race Selection</h3>
+  <label for="season">Season</label>
+  <input type="number" id="season" value="2026" min="2020" max="2030" onchange="loadAll()" />
+  <label for="roundNum">Round</label>
+  <input type="number" id="roundNum" value="1" min="1" max="24" onchange="loadAll()" />
+
+  <h3>Lap Selector</h3>
+  <input type="range" id="lapSlider" min="1" max="1" value="1" oninput="onLapChange()" />
+  <div class="lap-label" id="lapLabel">No data</div>
+
+  <div id="sidebarStandings"></div>
+</div>
+
+<!-- ========== MAIN ========== -->
+<div class="main" id="mainContent">
+  <div class="no-data" id="noData">
+    <h2>No Backend Connected</h2>
+    <p>Paste your backend URL above and click Connect, or add <code>?api=URL</code> to this page's URL.</p>
+  </div>
+</div>
+</div>
+
+<script>
+/* ================================================================
+   CONSTANTS
+   ================================================================ */
+const TEAM_COLORS = {
+  "Red Bull":"#3671C6","Mercedes":"#27F4D2","Ferrari":"#E8002D",
+  "McLaren":"#FF8000","Aston Martin":"#229971","Alpine F1 Team":"#FF87BC",
+  "Alpine":"#FF87BC","Williams":"#64C4FF","RB F1 Team":"#6692FF",
+  "Racing Bulls":"#6692FF","Haas F1 Team":"#B6BABD","Sauber":"#52E252",
+  "Audi":"#52E252","Cadillac":"#C0C0C0"
+};
+const _F1_LOGO_BASE = "https://media.formula1.com/image/upload/c_lfill,w_48/q_auto/v1740000000/common/f1/2026";
+const TEAM_LOGOS = {
+  "Red Bull":`${_F1_LOGO_BASE}/redbullracing/2026redbullracinglogowhite.webp`,
+  "Mercedes":`${_F1_LOGO_BASE}/mercedes/2026mercedeslogowhite.webp`,
+  "Ferrari":`${_F1_LOGO_BASE}/ferrari/2026ferrarilogowhite.webp`,
+  "McLaren":`${_F1_LOGO_BASE}/mclaren/2026mclarenlogowhite.webp`,
+  "Aston Martin":`${_F1_LOGO_BASE}/astonmartin/2026astonmartinlogowhite.webp`,
+  "Alpine F1 Team":`${_F1_LOGO_BASE}/alpine/2026alpinelogowhite.webp`,
+  "Alpine":`${_F1_LOGO_BASE}/alpine/2026alpinelogowhite.webp`,
+  "Williams":`${_F1_LOGO_BASE}/williams/2026williamslogowhite.webp`,
+  "RB F1 Team":`${_F1_LOGO_BASE}/racingbulls/2026racingbullslogowhite.webp`,
+  "Racing Bulls":`${_F1_LOGO_BASE}/racingbulls/2026racingbullslogowhite.webp`,
+  "Haas F1 Team":`${_F1_LOGO_BASE}/haasf1team/2026haasf1teamlogowhite.webp`,
+  "Sauber":`${_F1_LOGO_BASE}/audi/2026audilogowhite.webp`,
+  "Audi":`${_F1_LOGO_BASE}/audi/2026audilogowhite.webp`,
+  "Cadillac":`${_F1_LOGO_BASE}/cadillac/2026cadillaclogowhite.webp`
+};
+const PLOTLY_LAYOUT_BASE = {
+  paper_bgcolor:"transparent",plot_bgcolor:"transparent",
+  font:{color:"#a0a8b4",size:11},
+  margin:{l:50,r:20,t:40,b:40},
+  xaxis:{gridcolor:"#333842",zerolinecolor:"#333842"},
+  yaxis:{gridcolor:"#333842",zerolinecolor:"#333842"}
+};
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let API_BASE = "";
+let availableLaps = [];
+let currentMatrix = null;
+let currentSnapshots = null;
+let teamMapping = {};
+let standingsData = [];
+let evolutionData = [];
+
+/* ================================================================
+   API FETCH HELPER
+   ================================================================ */
+async function apiFetch(path) {
+  const url = API_BASE + path;
+  const res = await fetch(url, {
+    headers: {"ngrok-skip-browser-warning": "true"}
+  });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+/* ================================================================
+   CONNECT
+   ================================================================ */
+function getApiFromParams() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("api") || "";
+}
+
+async function connect() {
+  let url = document.getElementById("apiUrl").value.trim();
+  if (!url) url = getApiFromParams();
+  if (!url) return;
+  // Normalize
+  url = url.replace(/\/+$/, "");
+  if (!url.startsWith("http")) url = "https://" + url;
+  API_BASE = url;
+  document.getElementById("apiUrl").value = url;
+  localStorage.setItem("f1_api_url", url);
+
+  const badge = document.getElementById("statusBadge");
+  try {
+    await apiFetch("/api/health");
+    badge.textContent = "Connected";
+    badge.className = "status-badge ok";
+    loadAll();
+  } catch (e) {
+    badge.textContent = "Error";
+    badge.className = "status-badge err";
+    console.error("Connection failed:", e);
+  }
+}
+
+/* ================================================================
+   LOAD ALL DATA
+   ================================================================ */
+async function loadAll() {
+  if (!API_BASE) return;
+  const season = +document.getElementById("season").value;
+  const round = +document.getElementById("roundNum").value;
+
+  // Parallel fetch: laps, teams, standings
+  try {
+    const [lapsRes, teamsRes, standingsRes] = await Promise.all([
+      apiFetch(`/api/laps?season=${season}&round=${round}`),
+      apiFetch(`/api/teams?season=${season}`),
+      apiFetch(`/api/standings?season=${season}`)
+    ]);
+
+    availableLaps = lapsRes.laps || [];
+    teamMapping = teamsRes.mapping || {};
+    standingsData = standingsRes.records || [];
+
+    renderSidebarStandings();
+    setupLapSlider();
+
+    if (availableLaps.length > 0) {
+      await loadLapData(availableLaps[availableLaps.length - 1]);
+    } else {
+      // Try loading race_eve matrix
+      await loadLapData(null);
+    }
+
+    // Load evolution in background
+    loadEvolution(season, round);
+  } catch (e) {
+    console.error("loadAll failed:", e);
+    document.getElementById("mainContent").innerHTML =
+      '<div class="no-data"><h2>Failed to load data</h2><p>' + e.message + '</p></div>';
+  }
+}
+
+/* ================================================================
+   LAP SLIDER
+   ================================================================ */
+function setupLapSlider() {
+  const slider = document.getElementById("lapSlider");
+  const label = document.getElementById("lapLabel");
+  if (availableLaps.length === 0) {
+    slider.min = 1; slider.max = 1; slider.value = 1;
+    label.textContent = "No lap data (showing race eve)";
+    return;
+  }
+  slider.min = 0;
+  slider.max = availableLaps.length - 1;
+  slider.value = availableLaps.length - 1;
+  const lap = availableLaps[availableLaps.length - 1];
+  label.textContent = `Lap ${lap} / ${availableLaps[availableLaps.length - 1]} (${availableLaps.length} snapshots)`;
+}
+
+function onLapChange() {
+  const idx = +document.getElementById("lapSlider").value;
+  if (idx < 0 || idx >= availableLaps.length) return;
+  const lap = availableLaps[idx];
+  document.getElementById("lapLabel").textContent =
+    `Lap ${lap} / ${availableLaps[availableLaps.length - 1]} (${availableLaps.length} snapshots)`;
+  loadLapData(lap);
+}
+
+/* ================================================================
+   LOAD LAP DATA
+   ================================================================ */
+async function loadLapData(lap) {
+  const season = +document.getElementById("season").value;
+  const round = +document.getElementById("roundNum").value;
+
+  const mainEl = document.getElementById("mainContent");
+  mainEl.innerHTML = '<div class="loading"><span class="spin"></span>Loading predictions...</div>';
+
+  try {
+    const lapParam = lap !== null ? `&lap=${lap}` : "";
+    const [matrixRes, snapshotsRes] = await Promise.all([
+      apiFetch(`/api/matrix?season=${season}&round=${round}${lapParam}`),
+      lap !== null
+        ? apiFetch(`/api/snapshots?season=${season}&round=${round}&lap=${lap}`)
+        : Promise.resolve({records: []})
+    ]);
+
+    currentMatrix = matrixRes;
+    currentSnapshots = snapshotsRes.records || [];
+
+    renderDashboard(lap);
+  } catch (e) {
+    console.error("loadLapData failed:", e);
+    mainEl.innerHTML = '<div class="no-data"><h2>No predictions found</h2><p>' + e.message + '</p></div>';
+  }
+}
+
+async function loadEvolution(season, round) {
+  try {
+    const res = await apiFetch(`/api/evolution?season=${season}&round=${round}`);
+    evolutionData = res.records || [];
+  } catch {
+    evolutionData = [];
+  }
+}
+
+/* ================================================================
+   SIDEBAR STANDINGS
+   ================================================================ */
+function renderSidebarStandings() {
+  const el = document.getElementById("sidebarStandings");
+  if (!standingsData.length) { el.innerHTML = ""; return; }
+  let html = '<h3>Championship Standings</h3>';
+  standingsData.forEach(s => {
+    const team = teamMapping[s.driver_name] || "";
+    const color = TEAM_COLORS[team] || "#888";
+    const logo = TEAM_LOGOS[team] || "";
+    const logoImg = logo ? `<img src="${logo}" onerror="this.style.display='none'" />` : "";
+    html += `<div class="standings-row">
+      <span class="s-pos">${s.position}</span>
+      <span class="s-bar" style="background:${color}"></span>
+      ${logoImg}
+      <span class="s-name">${s.driver_name}</span>
+      <span class="s-pts">${Math.round(s.points)}pts</span>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+/* ================================================================
+   RENDER DASHBOARD
+   ================================================================ */
+function renderDashboard(lap) {
+  if (!currentMatrix || !currentMatrix.rows) return;
+  const rows = currentMatrix.rows;
+  const drivers = currentMatrix.drivers;
+  const maxLap = availableLaps.length ? availableLaps[availableLaps.length - 1] : "?";
+  const isFinished = lap !== null && lap >= maxLap && availableLaps.length > 1;
+
+  // Detect safety car from snapshots
+  let scStatus = "";
+  if (currentSnapshots.length && currentSnapshots[0].safety_car_active === 1) scStatus = "SAFETY CAR";
+  else if (currentSnapshots.length && currentSnapshots[0].safety_car_active === 2) scStatus = "VSC";
+
+  const leader = rows[0];
+  const lapDisplay = lap !== null ? lap : "Pre-Race";
+
+  let html = "";
+
+  // --- Status Row ---
+  html += '<div class="status-row">';
+  html += metricCard("Lap", lap !== null ? `${lap} / ${maxLap}` : "Race Eve");
+  html += metricCard("Active Drivers", drivers.length);
+  html += metricCard("Race Status", scStatus || (isFinished ? "FINISHED" : (lap !== null ? "GREEN" : "PRE-RACE")));
+  html += metricCard("Predicted Winner", leader.driver_name);
+  html += metricCard("Win Probability", pct(leader.win_prob));
+  html += '</div><hr class="divider">';
+
+  // --- Podium ---
+  html += '<h2>Predicted Podium</h2><div class="podium">';
+  const medals = ["🥇","🥈","🥉"];
+  const plabels = ["P1","P2","P3"];
+  for (let i = 0; i < 3 && i < rows.length; i++) {
+    const d = rows[i];
+    const team = teamMapping[d.driver_name] || "";
+    const color = TEAM_COLORS[team] || "#888";
+    const logo = TEAM_LOGOS[team] || "";
+    const logoImg = logo ? `<img src="${logo}" onerror="this.style.display='none'" />` : "";
+    html += `<div class="podium-card">
+      <div class="medal">${medals[i]} ${plabels[i]}</div>
+      <div class="driver-name">${logoImg}${d.driver_name}</div>
+      <div class="team-name" style="color:${color}">${team}</div>
+      <div class="prob-row">
+        <div class="prob-item"><div class="plabel">WIN</div><div class="pval">${pct(d.win_prob)}</div></div>
+        <div class="prob-item"><div class="plabel">PODIUM</div><div class="pval">${pct(d.podium_prob)}</div></div>
+      </div>
+    </div>`;
+  }
+  html += '</div><hr class="divider">';
+
+  // --- Race Order + Win Prob Chart ---
+  html += '<div class="row-2"><div class="section">';
+  html += `<h3>Race Order — Lap ${lapDisplay}</h3>`;
+  html += renderDriverTable(rows);
+  html += '</div><div class="section">';
+  html += '<h3>Win Probabilities</h3><div id="chartWinProb"></div>';
+  html += '</div></div><hr class="divider">';
+
+  // --- Heatmap ---
+  html += '<div class="section">';
+  html += `<h3>Position Probability Matrix — Lap ${lapDisplay}</h3>`;
+  html += '<div id="chartHeatmap"></div>';
+  html += '</div><hr class="divider">';
+
+  // --- Full Table ---
+  html += '<div class="section">';
+  html += `<h3>Full Predictions — Lap ${lapDisplay}</h3>`;
+  html += renderFullTable(rows);
+  html += '</div>';
+
+  // --- Lap Comparison ---
+  if (availableLaps.length >= 2) {
+    html += '<hr class="divider"><div class="section" id="comparisonSection">';
+    html += '<h3>Lap Comparison</h3>';
+    html += '<div class="compare-controls"><label>Compare with: </label><select id="compareLap" onchange="loadComparison()">';
+    const currentLap = lap;
+    availableLaps.forEach(l => {
+      if (l !== currentLap) html += `<option value="${l}">Lap ${l}</option>`;
+    });
+    html += '</select></div>';
+    html += '<div id="comparisonContent"><div class="loading"><span class="spin"></span>Select a lap to compare</div></div>';
+    html += '</div>';
+  }
+
+  // --- Evolution ---
+  html += '<hr class="divider"><div class="section">';
+  html += '<h3>Prediction Evolution</h3>';
+  html += '<div id="chartEvoWin"></div>';
+  html += '<div id="chartEvoPos" style="margin-top:16px"></div>';
+  html += '</div>';
+
+  document.getElementById("mainContent").innerHTML = html;
+
+  // Render Plotly charts after DOM update
+  requestAnimationFrame(() => {
+    renderWinProbChart(rows);
+    renderHeatmap(rows);
+    renderEvolutionCharts(lap);
+    if (availableLaps.length >= 2) loadComparison();
+  });
+}
+
+/* ================================================================
+   COMPONENTS
+   ================================================================ */
+function metricCard(label, value) {
+  return `<div class="metric-card"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+}
+
+function pct(v) {
+  if (v == null || isNaN(v)) return "-";
+  return (v * 100).toFixed(1) + "%";
+}
+
+function renderDriverTable(rows) {
+  let html = '<table class="driver-table"><thead><tr>';
+  html += '<th>POS</th><th></th><th></th><th>DRIVER</th><th>TEAM</th><th style="text-align:right">PRED</th><th style="text-align:right">WIN %</th>';
+  html += '</tr></thead><tbody>';
+
+  // Use snapshots for current positions if available, otherwise matrix order
+  let displayRows;
+  if (currentSnapshots.length) {
+    displayRows = currentSnapshots.sort((a, b) => (a.current_position || 99) - (b.current_position || 99)).map(s => {
+      const matrixRow = rows.find(r => r.driver_name === s.driver_name);
+      return {
+        driver_name: s.driver_name,
+        pos: s.current_position,
+        pred: s.predicted_position || (matrixRow ? matrixRow.expected_position : null),
+        win: s.win_prob || (matrixRow ? matrixRow.win_prob : 0)
+      };
+    });
+  } else {
+    displayRows = rows.map((r, i) => ({
+      driver_name: r.driver_name,
+      pos: null,
+      pred: r.expected_position,
+      win: r.win_prob
+    }));
+  }
+
+  displayRows.forEach((d, i) => {
+    const team = teamMapping[d.driver_name] || "";
+    const color = TEAM_COLORS[team] || "#888";
+    const logo = TEAM_LOGOS[team] || "";
+    const logoImg = logo ? `<img class="team-logo" src="${logo}" onerror="this.style.display='none'" />` : "";
+    const posLabel = d.pos ? `P${d.pos}` : `${i + 1}`;
+    const predLabel = d.pred != null ? d.pred.toFixed(1) : "-";
+    const winLabel = d.win != null ? pct(d.win) : "-";
+
+    html += `<tr>
+      <td class="pos">${posLabel}</td>
+      <td><span class="color-bar" style="background:${color}"></span></td>
+      <td>${logoImg}</td>
+      <td>${d.driver_name}</td>
+      <td class="team">${team}</td>
+      <td class="num">${predLabel}</td>
+      <td class="num">${winLabel}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function renderFullTable(rows) {
+  const posCols = [];
+  for (let i = 1; i <= 22; i++) if (rows[0][`P${i}`] !== undefined) posCols.push(`P${i}`);
+
+  let html = '<div style="overflow-x:auto"><table class="driver-table"><thead><tr>';
+  html += '<th>DRIVER</th><th>EXP POS</th><th>WIN %</th><th>PODIUM %</th><th>TOP 5 %</th>';
+  posCols.forEach(c => html += `<th style="text-align:right">${c}</th>`);
+  html += '</tr></thead><tbody>';
+
+  rows.forEach(r => {
+    html += '<tr>';
+    html += `<td>${r.driver_name}</td>`;
+    html += `<td class="num">${r.expected_position != null ? r.expected_position.toFixed(1) : "-"}</td>`;
+    html += `<td class="num">${pct(r.win_prob)}</td>`;
+    html += `<td class="num">${pct(r.podium_prob)}</td>`;
+    html += `<td class="num">${pct(r.top5_prob)}</td>`;
+    posCols.forEach(c => html += `<td class="num">${pct(r[c])}</td>`);
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+/* ================================================================
+   PLOTLY CHARTS
+   ================================================================ */
+function renderWinProbChart(rows) {
+  const el = document.getElementById("chartWinProb");
+  if (!el) return;
+  const top10 = [...rows].sort((a, b) => a.win_prob - b.win_prob).slice(-10);
+  const colors = top10.map(r => TEAM_COLORS[teamMapping[r.driver_name]] || "#888");
+
+  Plotly.newPlot(el, [{
+    type: "bar", orientation: "h",
+    x: top10.map(r => r.win_prob),
+    y: top10.map(r => r.driver_name),
+    marker: {color: colors},
+    text: top10.map(r => pct(r.win_prob)),
+    textposition: "outside",
+    hovertemplate: "%{y}: %{x:.1%}<extra></extra>"
+  }], {
+    ...PLOTLY_LAYOUT_BASE,
+    height: 400,
+    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title: "Win Probability"},
+    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
+    margin: {l: 140, r: 60, t: 10, b: 40}
+  }, {responsive: true, displayModeBar: false});
+}
+
+function renderHeatmap(rows) {
+  const el = document.getElementById("chartHeatmap");
+  if (!el) return;
+  const posCols = [];
+  for (let i = 1; i <= 22; i++) if (rows[0][`P${i}`] !== undefined) posCols.push(`P${i}`);
+
+  const z = rows.map(r => posCols.map(c => r[c] || 0));
+  const yLabels = rows.map(r => r.driver_name);
+
+  Plotly.newPlot(el, [{
+    type: "heatmap",
+    z: z, x: posCols, y: yLabels,
+    colorscale: "YlOrRd",
+    hovertemplate: "%{y}<br>%{x}: %{z:.1%}<extra></extra>"
+  }], {
+    ...PLOTLY_LAYOUT_BASE,
+    height: Math.max(500, rows.length * 28),
+    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Position", dtick: 1},
+    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true, autorange: "reversed"},
+    margin: {l: 140, r: 20, t: 10, b: 40}
+  }, {responsive: true, displayModeBar: false});
+}
+
+function renderEvolutionCharts(selectedLap) {
+  if (!evolutionData.length) {
+    const el1 = document.getElementById("chartEvoWin");
+    const el2 = document.getElementById("chartEvoPos");
+    if (el1) el1.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">Evolution data will appear after multiple laps.</div>';
+    if (el2) el2.innerHTML = '';
+    return;
+  }
+
+  // Find top 5 drivers by latest lap win_prob
+  const latestLap = Math.max(...evolutionData.map(r => r.lap));
+  const latestRows = evolutionData.filter(r => r.lap === latestLap);
+  const topDrivers = latestRows.sort((a, b) => b.win_prob - a.win_prob).slice(0, 5).map(r => r.driver_name);
+
+  // Win probability evolution
+  const el1 = document.getElementById("chartEvoWin");
+  if (el1) {
+    const traces = topDrivers.map(driver => {
+      const driverData = evolutionData.filter(r => r.driver_name === driver);
+      const team = teamMapping[driver] || "";
+      return {
+        x: driverData.map(r => r.lap),
+        y: driverData.map(r => r.win_prob),
+        name: driver,
+        type: "scatter", mode: "lines+markers",
+        line: {color: TEAM_COLORS[team] || "#888", width: 2},
+        marker: {size: 4},
+        hovertemplate: `${driver}<br>Lap %{x}: %{y:.1%}<extra></extra>`
+      };
+    });
+
+    const shapes = selectedLap != null ? [{
+      type: "line", x0: selectedLap, x1: selectedLap, y0: 0, y1: 1,
+      line: {color: "#fff", width: 1, dash: "dash"}, opacity: 0.5
+    }] : [];
+
+    Plotly.newPlot(el1, traces, {
+      ...PLOTLY_LAYOUT_BASE,
+      title: {text: "Win Probability Over Laps", font: {size: 13, color: "#a0a8b4"}},
+      height: 380,
+      xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Lap"},
+      yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, tickformat: ".0%", title: "Win Probability"},
+      shapes,
+      legend: {font: {size: 10}},
+      margin: {l: 60, r: 20, t: 50, b: 40}
+    }, {responsive: true, displayModeBar: false});
+  }
+
+  // Expected position evolution
+  const el2 = document.getElementById("chartEvoPos");
+  if (el2) {
+    const traces = topDrivers.map(driver => {
+      const driverData = evolutionData.filter(r => r.driver_name === driver);
+      const team = teamMapping[driver] || "";
+      return {
+        x: driverData.map(r => r.lap),
+        y: driverData.map(r => r.expected_position),
+        name: driver,
+        type: "scatter", mode: "lines+markers",
+        line: {color: TEAM_COLORS[team] || "#888", width: 2},
+        marker: {size: 4},
+        hovertemplate: `${driver}<br>Lap %{x}: P%{y:.1f}<extra></extra>`
+      };
+    });
+
+    const shapes = selectedLap != null ? [{
+      type: "line", x0: selectedLap, x1: selectedLap, y0: 0, y1: 22,
+      line: {color: "#fff", width: 1, dash: "dash"}, opacity: 0.5
+    }] : [];
+
+    Plotly.newPlot(el2, traces, {
+      ...PLOTLY_LAYOUT_BASE,
+      title: {text: "Expected Finishing Position Over Laps", font: {size: 13, color: "#a0a8b4"}},
+      height: 380,
+      xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Lap"},
+      yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, autorange: "reversed", title: "Expected Position"},
+      shapes,
+      legend: {font: {size: 10}},
+      margin: {l: 60, r: 20, t: 50, b: 40}
+    }, {responsive: true, displayModeBar: false});
+  }
+}
+
+/* ================================================================
+   LAP COMPARISON
+   ================================================================ */
+async function loadComparison() {
+  const selectEl = document.getElementById("compareLap");
+  if (!selectEl) return;
+  const compareLap = +selectEl.value;
+  const contentEl = document.getElementById("comparisonContent");
+  if (!contentEl) return;
+
+  const season = +document.getElementById("season").value;
+  const round = +document.getElementById("roundNum").value;
+  const currentLap = availableLaps[+document.getElementById("lapSlider").value] || availableLaps[availableLaps.length - 1];
+
+  contentEl.innerHTML = '<div class="loading"><span class="spin"></span>Loading comparison...</div>';
+
+  try {
+    const cmpRes = await apiFetch(`/api/matrix?season=${season}&round=${round}&lap=${compareLap}`);
+    if (!cmpRes.rows || !currentMatrix.rows) return;
+
+    const currentRows = currentMatrix.rows;
+    const prevRows = cmpRes.rows;
+
+    // Build lookup
+    const prevMap = {};
+    prevRows.forEach(r => prevMap[r.driver_name] = r);
+
+    // Merge and compute deltas
+    const merged = currentRows.map(r => {
+      const prev = prevMap[r.driver_name] || {win_prob: 0, expected_position: 20};
+      return {
+        driver_name: r.driver_name,
+        win_prob_now: r.win_prob || 0,
+        win_prob_prev: prev.win_prob || 0,
+        win_prob_delta: (r.win_prob || 0) - (prev.win_prob || 0),
+        exp_pos_now: r.expected_position || 20,
+        exp_pos_prev: prev.expected_position || 20,
+        pos_delta: (prev.expected_position || 20) - (r.expected_position || 20)
+      };
+    }).sort((a, b) => b.win_prob_now - a.win_prob_now).slice(0, 15);
+
+    let html = '<div class="row-2">';
+
+    // Win % change chart
+    html += '<div><div id="chartDeltaWin"></div></div>';
+    // Position change chart
+    html += '<div><div id="chartDeltaPos"></div></div>';
+    html += '</div>';
+
+    // Comparison table
+    html += '<table class="compare-table"><thead><tr>';
+    html += `<th>DRIVER</th><th>Win % (Lap ${compareLap})</th><th>Win % (Lap ${currentLap})</th><th>Change</th>`;
+    html += `<th>Exp Pos (Lap ${compareLap})</th><th>Exp Pos (Lap ${currentLap})</th><th>Pos Change</th>`;
+    html += '</tr></thead><tbody>';
+    merged.forEach(m => {
+      const winDeltaCls = m.win_prob_delta > 0.001 ? "delta-pos" : m.win_prob_delta < -0.001 ? "delta-neg" : "";
+      const posDeltaCls = m.pos_delta > 0.001 ? "delta-pos" : m.pos_delta < -0.001 ? "delta-neg" : "";
+      html += `<tr>
+        <td>${m.driver_name}</td>
+        <td class="num">${pct(m.win_prob_prev)}</td>
+        <td class="num">${pct(m.win_prob_now)}</td>
+        <td class="num ${winDeltaCls}">${m.win_prob_delta > 0 ? "+" : ""}${pct(m.win_prob_delta)}</td>
+        <td class="num">${m.exp_pos_prev.toFixed(1)}</td>
+        <td class="num">${m.exp_pos_now.toFixed(1)}</td>
+        <td class="num ${posDeltaCls}">${m.pos_delta > 0 ? "+" : ""}${m.pos_delta.toFixed(1)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+
+    // Side-by-side heatmaps
+    html += '<div class="row-2" style="margin-top:16px">';
+    html += `<div><div id="chartHmPrev"></div></div>`;
+    html += `<div><div id="chartHmCur"></div></div>`;
+    html += '</div>';
+
+    contentEl.innerHTML = html;
+
+    // Render delta charts
+    requestAnimationFrame(() => {
+      // Win delta bar chart
+      const sortedByDelta = [...merged].sort((a, b) => a.win_prob_delta - b.win_prob_delta);
+      Plotly.newPlot("chartDeltaWin", [{
+        type: "bar", orientation: "h",
+        x: sortedByDelta.map(m => m.win_prob_delta),
+        y: sortedByDelta.map(m => m.driver_name),
+        marker: {color: sortedByDelta.map(m => m.win_prob_delta < 0 ? "#ef4444" : "#22c55e")},
+        text: sortedByDelta.map(m => (m.win_prob_delta > 0 ? "+" : "") + pct(m.win_prob_delta)),
+        textposition: "outside",
+        hovertemplate: "%{y}: %{x:+.1%}<extra></extra>"
+      }], {
+        ...PLOTLY_LAYOUT_BASE,
+        title: {text: `Win % Change (Lap ${compareLap} → ${currentLap})`, font: {size: 12, color: "#a0a8b4"}},
+        height: 420,
+        xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%"},
+        yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
+        margin: {l: 140, r: 60, t: 40, b: 30}
+      }, {responsive: true, displayModeBar: false});
+
+      // Position delta bar chart
+      const sortedByPos = [...merged].sort((a, b) => b.pos_delta - a.pos_delta);
+      Plotly.newPlot("chartDeltaPos", [{
+        type: "bar", orientation: "h",
+        x: sortedByPos.map(m => m.pos_delta),
+        y: sortedByPos.map(m => m.driver_name),
+        marker: {color: sortedByPos.map(m => m.pos_delta > 0 ? "#22c55e" : m.pos_delta < 0 ? "#ef4444" : "#6b7280")},
+        text: sortedByPos.map(m => (m.pos_delta > 0 ? "+" : "") + m.pos_delta.toFixed(1)),
+        textposition: "outside",
+        hovertemplate: "%{y}: %{x:+.1f} positions<extra></extra>"
+      }], {
+        ...PLOTLY_LAYOUT_BASE,
+        title: {text: `Exp Position Change (Lap ${compareLap} → ${currentLap})`, font: {size: 12, color: "#a0a8b4"}},
+        height: 420,
+        xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Positions gained"},
+        yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
+        margin: {l: 140, r: 60, t: 40, b: 30}
+      }, {responsive: true, displayModeBar: false});
+
+      // Side-by-side heatmaps
+      const posCols = [];
+      for (let i = 1; i <= 22; i++) if (currentRows[0][`P${i}`] !== undefined) posCols.push(`P${i}`);
+      const topNames = merged.map(m => m.driver_name);
+
+      const prevHmData = topNames.map(name => {
+        const row = prevMap[name] || {};
+        return posCols.map(c => row[c] || 0);
+      });
+      const curHmData = topNames.map(name => {
+        const row = currentRows.find(r => r.driver_name === name) || {};
+        return posCols.map(c => row[c] || 0);
+      });
+
+      const hmLayout = (title) => ({
+        ...PLOTLY_LAYOUT_BASE,
+        title: {text: title, font: {size: 12, color: "#a0a8b4"}},
+        height: 420,
+        xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Position", dtick: 1},
+        yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true, autorange: "reversed"},
+        margin: {l: 140, r: 20, t: 40, b: 40}
+      });
+
+      Plotly.newPlot("chartHmPrev", [{
+        type: "heatmap", z: prevHmData, x: posCols, y: topNames,
+        colorscale: "YlOrRd", zmin: 0, zmax: 1,
+        hovertemplate: "%{y}<br>%{x}: %{z:.1%}<extra></extra>"
+      }], hmLayout(`Position Probabilities — Lap ${compareLap}`), {responsive: true, displayModeBar: false});
+
+      Plotly.newPlot("chartHmCur", [{
+        type: "heatmap", z: curHmData, x: posCols, y: topNames,
+        colorscale: "YlOrRd", zmin: 0, zmax: 1,
+        hovertemplate: "%{y}<br>%{x}: %{z:.1%}<extra></extra>"
+      }], hmLayout(`Position Probabilities — Lap ${currentLap}`), {responsive: true, displayModeBar: false});
+    });
+  } catch (e) {
+    contentEl.innerHTML = `<div style="color:var(--text2);padding:20px">Comparison failed: ${e.message}</div>`;
+  }
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+window.addEventListener("DOMContentLoaded", () => {
+  // Try URL param first, then localStorage
+  const paramUrl = getApiFromParams();
+  const savedUrl = localStorage.getItem("f1_api_url") || "";
+  const initUrl = paramUrl || savedUrl;
+  if (initUrl) {
+    document.getElementById("apiUrl").value = initUrl;
+    connect();
+  }
+});
+</script>
+</body>
+</html>
