@@ -186,19 +186,34 @@ def get_standings(
         from src.database.queries import get_standings_df
 
         with get_session() as session:
-            source_season = season
             df = get_standings_df(session, season, "driver")
-            if df.empty:
-                source_season = season - 1
-                df = get_standings_df(session, source_season, "driver")
-            if df.empty:
-                return JSONResponse({"records": [], "season": season})
-            latest = df[df["round"] == df["round"].max()]
-            records = latest[["driver_name", "driver_code", "position", "points"]].to_dict("records")
-            for rec in records:
-                for k, v in list(rec.items()):
-                    rec[k] = _to_json_safe(v)
-            return JSONResponse({"records": records, "season": source_season})
+            if not df.empty:
+                latest = df[df["round"] == df["round"].max()]
+                records = latest[["driver_name", "driver_code", "position", "points"]].to_dict("records")
+                for rec in records:
+                    for k, v in list(rec.items()):
+                        rec[k] = _to_json_safe(v)
+                return JSONResponse({"records": records, "season": season})
+
+            # No standings yet — build 0-point grid from this season's drivers
+            from sqlalchemy import text as sql_text
+
+            rows = session.execute(sql_text("""
+                SELECT DISTINCT d.full_name, d.code
+                FROM results r
+                JOIN drivers d ON r.driver_id = d.id
+                JOIN races ra ON r.race_id = ra.id
+                WHERE ra.season = :season
+                ORDER BY d.full_name
+            """), {"season": season}).fetchall()
+            if rows:
+                records = [
+                    {"driver_name": name, "driver_code": code, "position": i + 1, "points": 0}
+                    for i, (name, code) in enumerate(rows)
+                ]
+                return JSONResponse({"records": records, "season": season})
+
+            return JSONResponse({"records": [], "season": season})
     except Exception as e:
         return JSONResponse({"records": [], "error": str(e)})
 

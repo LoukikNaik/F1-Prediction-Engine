@@ -361,11 +361,7 @@ async function loadEvolution(season, round) {
 function renderSidebarStandings() {
   const el = document.getElementById("sidebarStandings");
   if (!standingsData.length) { el.innerHTML = ""; return; }
-  const season = +document.getElementById("season").value;
-  const label = standingsSeason < season
-    ? `${standingsSeason} Final Standings`
-    : "Championship Standings";
-  let html = `<h3>${label}</h3>`;
+  let html = `<h3>${standingsSeason} Standings</h3>`;
   standingsData.forEach(s => {
     const team = teamMapping[s.driver_name] || "";
     const color = TEAM_COLORS[team] || "#888";
