@@ -1,6 +1,6 @@
 """Feature engineering for F1 race prediction."""
 
-from datetime import date, datetime
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -202,11 +202,19 @@ def add_prev_season_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_championship_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add championship standings features."""
+    """Add championship standings features.
+
+    Uses shifted cumsum so each row sees standings *before* that race,
+    preventing data leakage from the current race's points.
+    """
     df = df.sort_values(["season", "round"])
 
-    # Cumulative points within the season
-    df["championship_points"] = df.groupby(["season", "driver_id"])["points"].cumsum()
+    # Cumulative points within the season, shifted by 1 so each row
+    # reflects standings BEFORE the current race (no leakage)
+    df["championship_points"] = (
+        df.groupby(["season", "driver_id"])["points"]
+        .transform(lambda x: x.cumsum().shift(1).fillna(0))
+    )
 
     # Championship position within the season (rank by cumulative points)
     df["championship_position"] = (
