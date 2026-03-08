@@ -313,6 +313,7 @@ let standingsSeason = 2026;
 let evolutionData = [];
 let circuitHistoryCache = {};
 let racesForSeason = [];
+let racesCache = {};
 let currentStage = "race";
 
 /* ================================================================
@@ -365,9 +366,15 @@ async function connect() {
    RACE LIST & STAGE MANAGEMENT
    ================================================================ */
 async function loadRaces(season) {
+  if (racesCache[season]) {
+    racesForSeason = racesCache[season];
+    populateRoundDropdown();
+    return;
+  }
   try {
     const res = await apiFetch(`/api/races?season=${season}`);
     racesForSeason = res.races || [];
+    racesCache[season] = racesForSeason;
   } catch {
     racesForSeason = [];
   }
@@ -497,13 +504,9 @@ async function loadStageData() {
   mainEl.innerHTML = '<div class="loading"><span class="spin"></span>Loading predictions...</div>';
 
   if (currentStage === "race") {
-    // Existing behavior: load latest lap or race_eve fallback + evolution
-    if (availableLaps.length > 0) {
-      await loadLapData(availableLaps[availableLaps.length - 1]);
-    } else {
-      await loadLapData(null);
-    }
-    await loadEvolution(season, round);
+    // Load lap data and evolution in parallel
+    const lap = availableLaps.length > 0 ? availableLaps[availableLaps.length - 1] : null;
+    await Promise.all([loadLapData(lap), loadEvolution(season, round)]);
   } else {
     // Stage-specific: fetch exact stage matrix, no snapshots
     try {
@@ -746,8 +749,8 @@ function renderDashboard(lap) {
   // Render Plotly charts after DOM update
   // Render Plotly charts then load driver evolution
   requestAnimationFrame(async () => {
-    renderWinProbChart(rows);
-    renderPodiumProbChart(rows);
+    renderProbChart("chartWinProb", rows, "win_prob", "Win Probability");
+    renderProbChart("chartPodiumProb", rows, "podium_prob", "Podium Probability");
     renderHeatmap(rows);
     renderEvolutionCharts(lap);
     await loadDriverEvolution();
@@ -844,51 +847,27 @@ function renderFullTable(rows) {
 /* ================================================================
    PLOTLY CHARTS
    ================================================================ */
-function renderWinProbChart(rows) {
-  const el = document.getElementById("chartWinProb");
+function renderProbChart(elId, rows, probKey, title) {
+  const el = document.getElementById(elId);
   if (!el) return;
-  const top10 = [...rows].sort((a, b) => a.win_prob - b.win_prob).slice(-10);
+  const top10 = [...rows].sort((a, b) => a[probKey] - b[probKey]).slice(-10);
   const colors = top10.map(r => TEAM_COLORS[teamMapping[r.driver_name]] || "#888");
+  const maxVal = Math.max(...top10.map(r => r[probKey]));
 
   Plotly.newPlot(el, [{
     type: "bar", orientation: "h",
-    x: top10.map(r => r.win_prob),
+    x: top10.map(r => r[probKey]),
     y: top10.map(r => r.driver_name),
     marker: {color: colors, line: {width: 0}},
-    text: top10.map(r => pct(r.win_prob)),
+    text: top10.map(r => pct(r[probKey])),
     textposition: "outside",
     textfont: {size: 11},
     hovertemplate: "%{y}: %{x:.1%}<extra></extra>"
   }], {
     ...PLOTLY_LAYOUT_BASE,
     height: 400,
-    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title: "Win Probability",
-      range: [0, Math.max(...top10.map(r => r.win_prob)) * 1.25]},
-    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
-    margin: {l: 150, r: 70, t: 10, b: 40}
-  }, {responsive: true, displayModeBar: false});
-}
-
-function renderPodiumProbChart(rows) {
-  const el = document.getElementById("chartPodiumProb");
-  if (!el) return;
-  const top10 = [...rows].sort((a, b) => a.podium_prob - b.podium_prob).slice(-10);
-  const colors = top10.map(r => TEAM_COLORS[teamMapping[r.driver_name]] || "#888");
-
-  Plotly.newPlot(el, [{
-    type: "bar", orientation: "h",
-    x: top10.map(r => r.podium_prob),
-    y: top10.map(r => r.driver_name),
-    marker: {color: colors, line: {width: 0}},
-    text: top10.map(r => pct(r.podium_prob)),
-    textposition: "outside",
-    textfont: {size: 11},
-    hovertemplate: "%{y}: %{x:.1%}<extra></extra>"
-  }], {
-    ...PLOTLY_LAYOUT_BASE,
-    height: 400,
-    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title: "Podium Probability",
-      range: [0, Math.min(Math.max(...top10.map(r => r.podium_prob)) * 1.15, 1.05)]},
+    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, tickformat: ".0%", title,
+      range: [0, Math.min(maxVal * 1.25, 1.05)]},
     yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true},
     margin: {l: 150, r: 70, t: 10, b: 40}
   }, {responsive: true, displayModeBar: false});

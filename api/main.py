@@ -153,7 +153,7 @@ def get_races(
                         available_stages.append(stage)
                 # Check if live lap files exist
                 live_pattern = f"matrix_{season}_r{round_num}_lap*.parquet"
-                has_live = bool(list(LIVE_PREDICTIONS_DIR.glob(live_pattern)))
+                has_live = any(LIVE_PREDICTIONS_DIR.glob(live_pattern))
 
                 races.append({
                     "round": round_num,
@@ -176,6 +176,8 @@ def get_matrix(
     stage: str | None = Query(None),
 ) -> JSONResponse:
     """Return the prediction matrix for a given lap (or race_eve fallback)."""
+    if stage is not None and stage not in STAGE_PRIORITY:
+        return JSONResponse({"error": f"Invalid stage. Must be one of: {', '.join(STAGE_PRIORITY)}"}, status_code=400)
     path = _find_matrix_path(season, round_num, lap, stage)
     if path is None:
         return JSONResponse({"error": "Matrix not found"}, status_code=404)
