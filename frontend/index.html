@@ -109,6 +109,22 @@ a{color:var(--accent);text-decoration:none}
 .no-data{text-align:center;color:var(--text2);padding:60px 20px}
 .no-data h2{margin-bottom:8px;color:var(--text)}
 .no-data code{background:var(--surface2);padding:4px 10px;border-radius:4px;font-size:0.85rem}
+
+/* ---------- Circuit History Tooltip ---------- */
+.driver-hover{cursor:pointer;position:relative}
+.circuit-tooltip{position:fixed;z-index:1000;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:12px;min-width:260px;max-width:340px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);pointer-events:none;font-size:0.8rem}
+.circuit-tooltip h4{font-size:0.85rem;margin-bottom:8px;color:var(--accent)}
+.circuit-tooltip .ct-row{display:flex;justify-content:space-between;padding:2px 0;
+  border-bottom:1px solid var(--border)}
+.circuit-tooltip .ct-row:last-child{border-bottom:none}
+.circuit-tooltip .ct-label{color:var(--text2);min-width:50px}
+.circuit-tooltip .ct-val{font-weight:600;text-align:right}
+.circuit-tooltip .ct-dnf{color:var(--red)}
+.circuit-tooltip .ct-win{color:var(--green)}
+.circuit-tooltip .ct-podium{color:var(--yellow)}
+.circuit-tooltip .ct-none{color:var(--text2);font-style:italic;padding:8px 0}
 </style>
 </head>
 <body>
@@ -195,6 +211,7 @@ let teamMapping = {};
 let standingsData = [];
 let standingsSeason = 2026;
 let evolutionData = [];
+let circuitHistoryCache = {};
 
 /* ================================================================
    API FETCH HELPER
@@ -247,6 +264,8 @@ async function loadAll() {
   if (!API_BASE) return;
   const season = +document.getElementById("season").value;
   const round = +document.getElementById("roundNum").value;
+
+  circuitHistoryCache = {};  // Clear cache on race change
 
   // Parallel fetch: laps, teams, standings
   try {
@@ -525,7 +544,7 @@ function renderDriverTable(rows) {
       <td class="pos">${posLabel}</td>
       <td><span class="color-bar" style="background:${color}"></span></td>
       <td>${logoImg}</td>
-      <td>${d.driver_name}</td>
+      <td class="driver-hover" data-driver="${d.driver_name}" onmouseenter="showCircuitTooltip(event)" onmouseleave="hideCircuitTooltip()">${d.driver_name}</td>
       <td class="team">${team}</td>
       <td class="num">${predLabel}</td>
       <td class="num">${winLabel}</td>
@@ -546,7 +565,7 @@ function renderFullTable(rows) {
 
   rows.forEach(r => {
     html += '<tr>';
-    html += `<td>${r.driver_name}</td>`;
+    html += `<td class="driver-hover" data-driver="${r.driver_name}" onmouseenter="showCircuitTooltip(event)" onmouseleave="hideCircuitTooltip()">${r.driver_name}</td>`;
     html += `<td class="num">${r.expected_position != null ? r.expected_position.toFixed(1) : "-"}</td>`;
     html += `<td class="num">${pct(r.win_prob)}</td>`;
     html += `<td class="num">${pct(r.podium_prob)}</td>`;
@@ -743,6 +762,96 @@ async function loadDriverEvolution() {
   } catch (e) {
     el.innerHTML = `<div style="color:var(--text2);padding:20px">Failed: ${e.message}</div>`;
   }
+}
+
+/* ================================================================
+   CIRCUIT HISTORY TOOLTIP
+   ================================================================ */
+let tooltipEl = null;
+
+function createTooltipEl() {
+  if (tooltipEl) return tooltipEl;
+  tooltipEl = document.createElement("div");
+  tooltipEl.className = "circuit-tooltip";
+  tooltipEl.style.display = "none";
+  document.body.appendChild(tooltipEl);
+  return tooltipEl;
+}
+
+async function showCircuitTooltip(event) {
+  const td = event.currentTarget;
+  const driver = td.dataset.driver;
+  if (!driver || !API_BASE) return;
+
+  const tip = createTooltipEl();
+  const season = +document.getElementById("season").value;
+  const round = +document.getElementById("roundNum").value;
+  const cacheKey = `${driver}_${season}_${round}`;
+
+  // Position tooltip near cursor
+  const rect = td.getBoundingClientRect();
+  tip.style.left = Math.min(rect.right + 8, window.innerWidth - 350) + "px";
+  tip.style.top = Math.max(rect.top - 10, 8) + "px";
+  tip.style.display = "block";
+  tip.innerHTML = '<div style="color:var(--text2);padding:4px">Loading...</div>';
+
+  // Fetch or use cache
+  if (!circuitHistoryCache[cacheKey]) {
+    try {
+      const res = await apiFetch(`/api/circuit-history?season=${season}&round=${round}&driver=${encodeURIComponent(driver)}`);
+      circuitHistoryCache[cacheKey] = res.records || [];
+    } catch {
+      circuitHistoryCache[cacheKey] = [];
+    }
+  }
+
+  const records = circuitHistoryCache[cacheKey];
+  const team = teamMapping[driver] || "";
+  const color = TEAM_COLORS[team] || "#888";
+
+  if (!records.length) {
+    tip.innerHTML = `<h4 style="color:${color}">${driver}</h4><div class="ct-none">No previous results at this circuit</div>`;
+    return;
+  }
+
+  let html = `<h4 style="color:${color}">${driver} — Circuit History</h4>`;
+  html += '<div class="ct-row" style="font-weight:600;color:var(--text2);border-bottom:2px solid var(--border)">';
+  html += '<span>Year</span><span>Grid</span><span>Finish</span><span>Pts</span><span>Status</span></div>';
+
+  records.forEach(r => {
+    const posClass = r.position === 1 ? "ct-win" : (r.position <= 3 ? "ct-podium" : "");
+    const dnfClass = r.status && r.status !== "Finished" && !r.status.startsWith("+") ? "ct-dnf" : "";
+    const posLabel = r.position != null ? `P${r.position}` : "DNF";
+    const statusLabel = r.status && r.status !== "Finished" && !r.status.startsWith("+") ? r.status : "";
+
+    html += `<div class="ct-row">
+      <span class="ct-label">${r.season}</span>
+      <span>${r.grid != null ? r.grid : "-"}</span>
+      <span class="${posClass || dnfClass}">${posLabel}</span>
+      <span>${r.points != null ? r.points : 0}</span>
+      <span class="${dnfClass}" style="font-size:0.75rem">${statusLabel}</span>
+    </div>`;
+  });
+
+  // Summary
+  const finishes = records.filter(r => r.position != null);
+  if (finishes.length) {
+    const avgPos = (finishes.reduce((s, r) => s + r.position, 0) / finishes.length).toFixed(1);
+    const bestPos = Math.min(...finishes.map(r => r.position));
+    const wins = finishes.filter(r => r.position === 1).length;
+    html += `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;gap:12px;font-size:0.78rem">`;
+    html += `<span>Avg: <b>P${avgPos}</b></span>`;
+    html += `<span>Best: <b class="ct-win">P${bestPos}</b></span>`;
+    html += `<span>Wins: <b>${wins}</b></span>`;
+    html += `<span>Races: <b>${records.length}</b></span>`;
+    html += `</div>`;
+  }
+
+  tip.innerHTML = html;
+}
+
+function hideCircuitTooltip() {
+  if (tooltipEl) tooltipEl.style.display = "none";
 }
 
 /* ================================================================

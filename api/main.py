@@ -271,6 +271,47 @@ def get_standings(
         return JSONResponse({"records": [], "error": str(e)})
 
 
+@app.get("/api/circuit-history")
+def get_circuit_history(
+    season: int = Query(...),
+    round_num: int = Query(..., alias="round"),
+    driver: str = Query(...),
+) -> JSONResponse:
+    """Return a driver's historical results at the circuit for this round."""
+    try:
+        from sqlalchemy import text as sql_text
+        from src.database.connection import get_session
+
+        with get_session() as session:
+            rows = session.execute(sql_text("""
+                SELECT ra.season, r.grid, r.position, r.status, r.points, r.laps
+                FROM results r
+                JOIN drivers d ON r.driver_id = d.id
+                JOIN races ra ON r.race_id = ra.id
+                WHERE d.full_name = :driver
+                  AND ra.circuit_id = (
+                      SELECT circuit_id FROM races
+                      WHERE season = :season AND round = :round
+                  )
+                  AND ra.season < :season
+                ORDER BY ra.season DESC
+            """), {"driver": driver, "season": season, "round": round_num}).fetchall()
+
+            records = []
+            for row in rows:
+                records.append({
+                    "season": int(row[0]),
+                    "grid": _to_json_safe(row[1]),
+                    "position": _to_json_safe(row[2]),
+                    "status": str(row[3]) if row[3] else None,
+                    "points": _to_json_safe(row[4]),
+                    "laps": _to_json_safe(row[5]),
+                })
+            return JSONResponse({"driver": driver, "records": records})
+    except Exception as e:
+        return JSONResponse({"driver": driver, "records": [], "error": str(e)})
+
+
 @app.get("/api/teams")
 def get_teams(
     season: int = Query(...),

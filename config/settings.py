@@ -43,7 +43,7 @@ ENSEMBLE_MODELS = ["lightgbm", "xgboost", "logistic_regression"]
 RANDOM_SEED = 42
 
 # Feature engineering
-ROLLING_WINDOWS = [3, 5]
+ROLLING_WINDOWS = [3, 5, 10]
 ELO_K_FACTOR = 32
 ELO_INITIAL_RATING = 1500
 
