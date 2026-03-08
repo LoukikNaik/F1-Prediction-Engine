@@ -70,15 +70,27 @@ def _matrix_to_records(df: pd.DataFrame) -> list[dict]:
     return records
 
 
-def _find_matrix_path(season: int, round_num: int, lap: int | None = None) -> Path | None:
+STAGE_PRIORITY = ("race_eve", "post_sprint", "post_qualifying", "pre_weekend")
+
+
+def _find_matrix_path(
+    season: int,
+    round_num: int,
+    lap: int | None = None,
+    stage: str | None = None,
+) -> Path | None:
     """Locate a prediction matrix parquet file."""
     if lap is not None:
         path = LIVE_PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_lap{lap}.parquet"
         if path.exists():
             return path
-    # Fallback through stages in priority order
-    for stage in ("race_eve", "post_sprint", "post_qualifying", "pre_weekend"):
+    # If an explicit stage is requested, return only that exact file
+    if stage is not None:
         path = PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_{stage}.parquet"
+        return path if path.exists() else None
+    # Fallback through stages in priority order
+    for s in STAGE_PRIORITY:
+        path = PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_{s}.parquet"
         if path.exists():
             return path
     return None
@@ -111,14 +123,60 @@ def get_laps(
     return {"laps": sorted(laps)}
 
 
+@app.get("/api/races")
+def get_races(
+    season: int = Query(...),
+) -> JSONResponse:
+    """Return races for a season with available prediction stages per round."""
+    try:
+        from sqlalchemy import text as sql_text
+
+        from src.database.connection import get_session
+
+        with get_session() as session:
+            rows = session.execute(sql_text("""
+                SELECT r.round, r.race_name, c.name, c.country
+                FROM races r
+                LEFT JOIN circuits c ON r.circuit_id = c.id
+                WHERE r.season = :season
+                ORDER BY r.round
+            """), {"season": season}).fetchall()
+
+            races = []
+            for row in rows:
+                round_num = int(row[0])
+                # Check which stage parquet files exist
+                available_stages = []
+                for stage in STAGE_PRIORITY:
+                    path = PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_{stage}.parquet"
+                    if path.exists():
+                        available_stages.append(stage)
+                # Check if live lap files exist
+                live_pattern = f"matrix_{season}_r{round_num}_lap*.parquet"
+                has_live = bool(list(LIVE_PREDICTIONS_DIR.glob(live_pattern)))
+
+                races.append({
+                    "round": round_num,
+                    "race_name": str(row[1]) if row[1] else f"Round {round_num}",
+                    "circuit_name": str(row[2]) if row[2] else None,
+                    "country": str(row[3]) if row[3] else None,
+                    "available_stages": available_stages,
+                    "has_live": has_live,
+                })
+            return JSONResponse({"races": races})
+    except Exception as e:
+        return JSONResponse({"races": [], "error": str(e)})
+
+
 @app.get("/api/matrix")
 def get_matrix(
     season: int = Query(...),
     round_num: int = Query(..., alias="round"),
     lap: int | None = Query(None),
+    stage: str | None = Query(None),
 ) -> JSONResponse:
     """Return the prediction matrix for a given lap (or race_eve fallback)."""
-    path = _find_matrix_path(season, round_num, lap)
+    path = _find_matrix_path(season, round_num, lap, stage)
     if path is None:
         return JSONResponse({"error": "Matrix not found"}, status_code=404)
     df = pd.read_parquet(path)

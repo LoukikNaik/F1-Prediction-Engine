@@ -43,6 +43,17 @@ a{color:var(--accent);text-decoration:none}
 .sidebar input[type=range]{width:100%;accent-color:var(--accent)}
 .sidebar .lap-label{font-size:0.82rem;color:var(--text2);text-align:center;margin-top:2px}
 
+/* ---------- Stage Toggle ---------- */
+.stage-toggle{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.stage-option{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;
+  font-size:0.82rem;cursor:pointer;transition:background 0.15s}
+.stage-option:hover{background:var(--surface2)}
+.stage-option input[type=radio]{accent-color:var(--accent);margin:0}
+.stage-option.disabled{opacity:0.35;pointer-events:none}
+.stage-option .stage-label{color:var(--text)}
+.stage-option.disabled .stage-label{color:var(--text2)}
+.lap-section-hidden{display:none}
+
 .main{padding:20px;overflow-y:auto;max-height:calc(100vh - 52px)}
 .main h2{font-size:1.1rem;margin-bottom:12px;color:var(--text)}
 .divider{border:none;border-top:1px solid var(--border);margin:20px 0}
@@ -144,13 +155,41 @@ a{color:var(--accent);text-decoration:none}
 <div class="sidebar">
   <h3>Race Selection</h3>
   <label for="season">Season</label>
-  <input type="number" id="season" value="2026" min="2020" max="2030" onchange="loadAll()" />
+  <input type="number" id="season" value="2026" min="2020" max="2030" onchange="onSeasonChange()" />
   <label for="roundNum">Round</label>
-  <input type="number" id="roundNum" value="1" min="1" max="24" onchange="loadAll()" />
+  <select id="roundNum" onchange="onRoundChange()">
+    <option value="1">R1</option>
+  </select>
 
-  <h3>Lap Selector</h3>
-  <input type="range" id="lapSlider" min="1" max="1" value="1" oninput="onLapChange()" />
-  <div class="lap-label" id="lapLabel">No data</div>
+  <h3>Prediction Stage</h3>
+  <div class="stage-toggle" id="stageToggle">
+    <label class="stage-option" data-stage="pre_weekend">
+      <input type="radio" name="stage" value="pre_weekend" onchange="onStageChange()">
+      <span class="stage-label">Pre-Weekend</span>
+    </label>
+    <label class="stage-option" data-stage="post_qualifying">
+      <input type="radio" name="stage" value="post_qualifying" onchange="onStageChange()">
+      <span class="stage-label">Post-Qualifying</span>
+    </label>
+    <label class="stage-option" data-stage="post_sprint">
+      <input type="radio" name="stage" value="post_sprint" onchange="onStageChange()">
+      <span class="stage-label">Post-Sprint</span>
+    </label>
+    <label class="stage-option" data-stage="race_eve">
+      <input type="radio" name="stage" value="race_eve" onchange="onStageChange()">
+      <span class="stage-label">Race Eve</span>
+    </label>
+    <label class="stage-option" data-stage="race">
+      <input type="radio" name="stage" value="race" onchange="onStageChange()">
+      <span class="stage-label">Race (Live)</span>
+    </label>
+  </div>
+
+  <div id="lapSection">
+    <h3>Lap Selector</h3>
+    <input type="range" id="lapSlider" min="1" max="1" value="1" oninput="onLapChange()" />
+    <div class="lap-label" id="lapLabel">No data</div>
+  </div>
 
   <div id="sidebarStandings"></div>
 </div>
@@ -212,6 +251,8 @@ let standingsData = [];
 let standingsSeason = 2026;
 let evolutionData = [];
 let circuitHistoryCache = {};
+let racesForSeason = [];
+let currentStage = "race";
 
 /* ================================================================
    API FETCH HELPER
@@ -249,6 +290,8 @@ async function connect() {
     await apiFetch("/api/health");
     badge.textContent = "Connected";
     badge.className = "status-badge ok";
+    const season = +document.getElementById("season").value;
+    await loadRaces(season);
     loadAll();
   } catch (e) {
     badge.textContent = "Error";
@@ -258,8 +301,162 @@ async function connect() {
 }
 
 /* ================================================================
-   LOAD ALL DATA
+   RACE LIST & STAGE MANAGEMENT
    ================================================================ */
+async function loadRaces(season) {
+  try {
+    const res = await apiFetch(`/api/races?season=${season}`);
+    racesForSeason = res.races || [];
+  } catch {
+    racesForSeason = [];
+  }
+  populateRoundDropdown();
+}
+
+function populateRoundDropdown() {
+  const sel = document.getElementById("roundNum");
+  const prevVal = sel.value;
+  sel.innerHTML = "";
+  if (racesForSeason.length === 0) {
+    for (let i = 1; i <= 24; i++) {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = `R${i}`;
+      sel.appendChild(opt);
+    }
+  } else {
+    racesForSeason.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.round;
+      opt.textContent = `R${r.round} — ${r.race_name}`;
+      sel.appendChild(opt);
+    });
+  }
+  // Restore previous selection if still valid
+  if ([...sel.options].some(o => o.value === prevVal)) {
+    sel.value = prevVal;
+  }
+}
+
+async function onSeasonChange() {
+  const season = +document.getElementById("season").value;
+  await loadRaces(season);
+  loadAll();
+}
+
+function onRoundChange() {
+  updateStageToggle();
+  loadAll();
+}
+
+function updateStageToggle() {
+  const round = +document.getElementById("roundNum").value;
+  const raceInfo = racesForSeason.find(r => r.round === round);
+  const availableStages = raceInfo ? raceInfo.available_stages : [];
+  const hasLive = raceInfo ? raceInfo.has_live : false;
+
+  const options = document.querySelectorAll(".stage-option");
+  let currentValid = false;
+
+  options.forEach(opt => {
+    const stage = opt.dataset.stage;
+    let enabled = false;
+    if (stage === "race") {
+      enabled = hasLive;
+    } else {
+      enabled = availableStages.includes(stage);
+    }
+    opt.classList.toggle("disabled", !enabled);
+    const radio = opt.querySelector("input[type=radio]");
+    radio.disabled = !enabled;
+    if (stage === currentStage && enabled) currentValid = true;
+  });
+
+  // If current stage is disabled, auto-select best available
+  if (!currentValid) {
+    // Prefer: race > race_eve > post_sprint > post_qualifying > pre_weekend
+    const priority = ["race", "race_eve", "post_sprint", "post_qualifying", "pre_weekend"];
+    let picked = false;
+    for (const s of priority) {
+      const opt = document.querySelector(`.stage-option[data-stage="${s}"]`);
+      if (opt && !opt.classList.contains("disabled")) {
+        opt.querySelector("input[type=radio]").checked = true;
+        currentStage = s;
+        picked = true;
+        break;
+      }
+    }
+    if (!picked) {
+      // Nothing available — default to pre_weekend but keep all enabled
+      currentStage = "pre_weekend";
+      const pw = document.querySelector('.stage-option[data-stage="pre_weekend"] input');
+      if (pw) pw.checked = true;
+    }
+  } else {
+    // Make sure the radio is checked
+    const radio = document.querySelector(`.stage-option[data-stage="${currentStage}"] input`);
+    if (radio) radio.checked = true;
+  }
+
+  toggleLapSection();
+}
+
+function onStageChange() {
+  const checked = document.querySelector('input[name="stage"]:checked');
+  if (checked) currentStage = checked.value;
+  toggleLapSection();
+  loadStageData();
+}
+
+function toggleLapSection() {
+  const section = document.getElementById("lapSection");
+  if (currentStage === "race") {
+    section.classList.remove("lap-section-hidden");
+  } else {
+    section.classList.add("lap-section-hidden");
+  }
+}
+
+const STAGE_DISPLAY = {
+  "pre_weekend": "Pre-Weekend",
+  "post_qualifying": "Post-Qualifying",
+  "post_sprint": "Post-Sprint",
+  "race_eve": "Race Eve",
+  "race": "Race"
+};
+
+async function loadStageData() {
+  const season = +document.getElementById("season").value;
+  const round = +document.getElementById("roundNum").value;
+  const mainEl = document.getElementById("mainContent");
+  mainEl.innerHTML = '<div class="loading"><span class="spin"></span>Loading predictions...</div>';
+
+  if (currentStage === "race") {
+    // Existing behavior: load latest lap or race_eve fallback + evolution
+    if (availableLaps.length > 0) {
+      await loadLapData(availableLaps[availableLaps.length - 1]);
+    } else {
+      await loadLapData(null);
+    }
+    await loadEvolution(season, round);
+  } else {
+    // Stage-specific: fetch exact stage matrix, no snapshots
+    try {
+      const matrixRes = await apiFetch(
+        `/api/matrix?season=${season}&round=${round}&stage=${currentStage}`
+      );
+      currentMatrix = matrixRes;
+      currentSnapshots = [];
+      evolutionData = [];
+      renderDashboard(null);
+    } catch (e) {
+      console.error("loadStageData failed:", e);
+      mainEl.innerHTML = '<div class="no-data"><h2>No predictions found</h2><p>No ' +
+        STAGE_DISPLAY[currentStage] + ' prediction available for this round.</p></div>';
+    }
+  }
+}
+
 async function loadAll() {
   if (!API_BASE) return;
   const season = +document.getElementById("season").value;
@@ -281,17 +478,11 @@ async function loadAll() {
     standingsSeason = standingsRes.season || season;
 
     renderSidebarStandings();
+    updateStageToggle();
     setupLapSlider();
 
-    if (availableLaps.length > 0) {
-      await loadLapData(availableLaps[availableLaps.length - 1]);
-    } else {
-      // Try loading race_eve matrix
-      await loadLapData(null);
-    }
-
-    // Load evolution before rendering
-    await loadEvolution(season, round);
+    // Delegate to stage-aware loader
+    await loadStageData();
   } catch (e) {
     console.error("loadAll failed:", e);
     document.getElementById("mainContent").innerHTML =
@@ -403,15 +594,21 @@ function renderDashboard(lap) {
   else if (currentSnapshots.length && currentSnapshots[0].safety_car_active === 2) scStatus = "VSC";
 
   const leader = rows[0];
-  const lapDisplay = lap !== null ? lap : "Pre-Race";
+  const isStageMode = currentStage !== "race" && lap === null;
+  const stageLabel = STAGE_DISPLAY[currentStage] || currentStage;
+  const lapDisplay = isStageMode ? stageLabel : (lap !== null ? lap : "Pre-Race");
 
   let html = "";
 
   // --- Status Row ---
   html += '<div class="status-row">';
-  html += metricCard("Lap", lap !== null ? `${lap} / ${maxLap}` : "Race Eve");
+  if (isStageMode) {
+    html += metricCard("Stage", stageLabel);
+  } else {
+    html += metricCard("Lap", lap !== null ? `${lap} / ${maxLap}` : "Race Eve");
+  }
   html += metricCard("Active Drivers", drivers.length);
-  html += metricCard("Race Status", scStatus || (isFinished ? "FINISHED" : (lap !== null ? "GREEN" : "PRE-RACE")));
+  html += metricCard("Race Status", scStatus || (isStageMode ? "PREDICTION" : (isFinished ? "FINISHED" : (lap !== null ? "GREEN" : "PRE-RACE"))));
   html += metricCard("Predicted Winner", leader.driver_name);
   html += metricCard("Win Probability", pct(leader.win_prob));
   html += '</div><hr class="divider">';
@@ -440,7 +637,7 @@ function renderDashboard(lap) {
 
   // --- Race Order + Win Prob Chart ---
   html += '<div class="row-2"><div class="section">';
-  html += `<h3>Race Order — Lap ${lapDisplay}</h3>`;
+  html += `<h3>Race Order — ${isStageMode ? stageLabel : 'Lap ' + lapDisplay}</h3>`;
   html += renderDriverTable(rows);
   html += '</div><div class="section">';
   html += '<h3>Win Probabilities</h3><div id="chartWinProb"></div>';
@@ -448,13 +645,13 @@ function renderDashboard(lap) {
 
   // --- Heatmap ---
   html += '<div class="section">';
-  html += `<h3>Position Probability Matrix — Lap ${lapDisplay}</h3>`;
+  html += `<h3>Position Probability Matrix — ${isStageMode ? stageLabel : 'Lap ' + lapDisplay}</h3>`;
   html += '<div id="chartHeatmap"></div>';
   html += '</div><hr class="divider">';
 
   // --- Full Table ---
   html += '<div class="section">';
-  html += `<h3>Full Predictions — Lap ${lapDisplay}</h3>`;
+  html += `<h3>Full Predictions — ${isStageMode ? stageLabel : 'Lap ' + lapDisplay}</h3>`;
   html += renderFullTable(rows);
   html += '</div>';
 
