@@ -258,8 +258,7 @@ a{color:var(--accent);text-decoration:none}
 <!-- ========== MAIN ========== -->
 <div class="main" id="mainContent">
   <div class="no-data" id="noData">
-    <h2>No Backend Connected</h2>
-    <p>Paste your backend URL above and click Connect, or add <code>?api=URL</code> to this page's URL.</p>
+    <div class="loading"><span class="spin"></span>Loading predictions...</div>
   </div>
 </div>
 </div>
@@ -304,6 +303,7 @@ const PLOTLY_LAYOUT_BASE = {
    STATE
    ================================================================ */
 let API_BASE = "";
+let dataMode = "static"; // "static" or "api"
 let availableLaps = [];
 let currentMatrix = null;
 let currentSnapshots = null;
@@ -317,9 +317,89 @@ let racesCache = {};
 let currentStage = "race";
 
 /* ================================================================
-   API FETCH HELPER
+   STATIC PATH ROUTER
+   ================================================================ */
+function apiPathToStaticPath(apiPath) {
+  // Parse path and query string
+  const [path, qs] = apiPath.split("?");
+  const params = new URLSearchParams(qs || "");
+  const season = params.get("season") || "2026";
+  const round = params.get("round");
+
+  if (path === "/api/races") return `./data/${season}/races.json`;
+  if (path === "/api/teams") return `./data/${season}/teams.json`;
+  if (path === "/api/standings") return `./data/${season}/standings.json`;
+  if (path === "/api/laps") return `./data/${season}/r${round}/live/laps.json`;
+
+  if (path === "/api/matrix") {
+    const lap = params.get("lap");
+    const stage = params.get("stage");
+    if (lap) return `./data/${season}/r${round}/live/lap_${lap}.json`;
+    if (stage) return `./data/${season}/r${round}/${stage}.json`;
+    // Fallback: try race_eve
+    return `./data/${season}/r${round}/race_eve.json`;
+  }
+
+  if (path === "/api/evolution") return `./data/${season}/r${round}/live/evolution.json`;
+  if (path === "/api/circuit-history") return `./data/${season}/r${round}/circuit_history.json`;
+  if (path === "/api/driver-evolution") return `./data/${season}/r${round}/live/evolution.json`;
+  if (path === "/api/snapshots") {
+    const lap = params.get("lap");
+    if (lap) return `./data/${season}/r${round}/live/lap_${lap}.json`;
+    return null;
+  }
+  return null;
+}
+
+/* ================================================================
+   API FETCH HELPER — DUAL MODE
    ================================================================ */
 async function apiFetch(path) {
+  if (dataMode === "static") {
+    const staticPath = apiPathToStaticPath(path);
+    if (!staticPath) return {records: [], rows: []};
+    try {
+      const res = await fetch(staticPath);
+      if (!res.ok) return {records: [], rows: []};
+      const data = await res.json();
+
+      // For circuit-history in static mode, filter by driver param client-side
+      if (path.startsWith("/api/circuit-history")) {
+        const params = new URLSearchParams(path.split("?")[1] || "");
+        const driver = params.get("driver");
+        // Static file is {driverName: [records]}
+        if (driver && data[driver]) {
+          return {driver, records: data[driver]};
+        }
+        // Might be in the original format already
+        if (data.records) return data;
+        return {driver, records: []};
+      }
+
+      // For driver-evolution in static mode, filter from evolution data
+      if (path.startsWith("/api/driver-evolution")) {
+        const params = new URLSearchParams(path.split("?")[1] || "");
+        const driver = params.get("driver");
+        const evoRecords = data.records || [];
+        const filtered = evoRecords.filter(r => r.driver_name === driver);
+        // Transform to per-lap records with position columns
+        return {driver, records: filtered};
+      }
+
+      // For lap matrices, snapshots are embedded
+      if (path.startsWith("/api/snapshots")) {
+        // Try to get snapshots from the lap file
+        if (data.snapshots) return {records: data.snapshots};
+        return {records: []};
+      }
+
+      return data;
+    } catch {
+      return {records: [], rows: []};
+    }
+  }
+
+  // API mode
   const url = API_BASE + path;
   const res = await fetch(url, {
     headers: {"ngrok-skip-browser-warning": "true"}
@@ -344,13 +424,14 @@ async function connect() {
   url = url.replace(/\/+$/, "");
   if (!url.startsWith("http")) url = "https://" + url;
   API_BASE = url;
+  dataMode = "api";
   document.getElementById("apiUrl").value = url;
   localStorage.setItem("f1_api_url", url);
 
   const badge = document.getElementById("statusBadge");
   try {
     await apiFetch("/api/health");
-    badge.textContent = "Connected";
+    badge.textContent = "Connected (API)";
     badge.className = "status-badge ok";
     const season = +document.getElementById("season").value;
     await loadRaces(season);
@@ -359,6 +440,27 @@ async function connect() {
     badge.textContent = "Error";
     badge.className = "status-badge err";
     console.error("Connection failed:", e);
+  }
+}
+
+async function tryStaticMode() {
+  const season = +document.getElementById("season").value;
+  try {
+    const res = await fetch(`./data/${season}/races.json`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data.races || data.races.length === 0) return false;
+    dataMode = "static";
+    const badge = document.getElementById("statusBadge");
+    badge.textContent = "Static Data";
+    badge.className = "status-badge ok";
+    racesForSeason = data.races;
+    racesCache[season] = racesForSeason;
+    populateRoundDropdown();
+    await loadAll();
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -408,8 +510,13 @@ function populateRoundDropdown() {
 
 async function onSeasonChange() {
   const season = +document.getElementById("season").value;
-  await loadRaces(season);
-  loadAll();
+  if (dataMode === "static") {
+    racesCache = {};
+    await tryStaticMode();
+  } else {
+    await loadRaces(season);
+    loadAll();
+  }
 }
 
 function onRoundChange() {
@@ -526,7 +633,7 @@ async function loadStageData() {
 }
 
 async function loadAll() {
-  if (!API_BASE) return;
+  if (dataMode === "api" && !API_BASE) return;
   const season = +document.getElementById("season").value;
   const round = +document.getElementById("roundNum").value;
 
@@ -597,15 +704,22 @@ async function loadLapData(lap) {
 
   try {
     const lapParam = lap !== null ? `&lap=${lap}` : "";
-    const [matrixRes, snapshotsRes] = await Promise.all([
-      apiFetch(`/api/matrix?season=${season}&round=${round}${lapParam}`),
-      lap !== null
-        ? apiFetch(`/api/snapshots?season=${season}&round=${round}&lap=${lap}`)
-        : Promise.resolve({records: []})
-    ]);
 
-    currentMatrix = matrixRes;
-    currentSnapshots = snapshotsRes.records || [];
+    if (dataMode === "static" && lap !== null) {
+      // In static mode, lap file has matrix + snapshots combined
+      const lapData = await apiFetch(`/api/matrix?season=${season}&round=${round}&lap=${lap}`);
+      currentMatrix = lapData;
+      currentSnapshots = lapData.snapshots || [];
+    } else {
+      const [matrixRes, snapshotsRes] = await Promise.all([
+        apiFetch(`/api/matrix?season=${season}&round=${round}${lapParam}`),
+        lap !== null
+          ? apiFetch(`/api/snapshots?season=${season}&round=${round}&lap=${lap}`)
+          : Promise.resolve({records: []})
+      ]);
+      currentMatrix = matrixRes;
+      currentSnapshots = snapshotsRes.records || [];
+    }
 
     renderDashboard(lap);
   } catch (e) {
@@ -993,8 +1107,16 @@ async function loadDriverEvolution() {
   const team = teamMapping[driver] || "";
 
   try {
-    const res = await apiFetch(`/api/driver-evolution?season=${season}&round=${round}&driver=${encodeURIComponent(driver)}`);
-    const records = res.records || [];
+    let records;
+    if (dataMode === "static" && evolutionData.length) {
+      // Filter from already-loaded evolution data
+      records = evolutionData
+        .filter(r => r.driver_name === driver)
+        .sort((a, b) => a.lap - b.lap);
+    } else {
+      const res = await apiFetch(`/api/driver-evolution?season=${season}&round=${round}&driver=${encodeURIComponent(driver)}`);
+      records = res.records || [];
+    }
     if (!records.length) {
       el.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">No lap data for this driver.</div>';
       return;
@@ -1051,7 +1173,7 @@ function createTooltipEl() {
 async function showCircuitTooltip(event) {
   const td = event.currentTarget;
   const driver = td.dataset.driver;
-  if (!driver || !API_BASE) return;
+  if (!driver || (dataMode === "api" && !API_BASE)) return;
 
   const tip = createTooltipEl();
   const season = +document.getElementById("season").value;
@@ -1141,14 +1263,23 @@ function updateStageActiveClass() {
 /* ================================================================
    INIT
    ================================================================ */
-window.addEventListener("DOMContentLoaded", () => {
-  // Try URL param first, then localStorage
+window.addEventListener("DOMContentLoaded", async () => {
+  // Try URL param first, then localStorage, then static data
   const paramUrl = getApiFromParams();
   const savedUrl = localStorage.getItem("f1_api_url") || "";
   const initUrl = paramUrl || savedUrl;
+
   if (initUrl) {
     document.getElementById("apiUrl").value = initUrl;
     connect();
+  } else {
+    // Try static mode — load from ./data/
+    const loaded = await tryStaticMode();
+    if (!loaded) {
+      document.getElementById("noData").innerHTML =
+        '<div class="no-data"><h2>No Data Available</h2>' +
+        '<p>Paste a backend URL above to connect, or add <code>?api=URL</code> to this page\'s URL.</p></div>';
+    }
   }
 });
 </script>

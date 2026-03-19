@@ -1,7 +1,8 @@
-.PHONY: setup pipeline dashboard train test lint clean matrix predict-aus predict-race predict-season championship backfill-weather migrate fetch-schedule live api serve
+.PHONY: setup pipeline dashboard train test lint clean matrix predict-aus predict-race predict-season championship backfill-weather migrate fetch-schedule live api serve export publish publish-round schedule
 
 SEASON ?= 2026
 ROUND ?= 1
+STAGE ?= pre_weekend
 
 setup:
 	python -m venv .venv
@@ -81,6 +82,19 @@ api:
 serve:
 	@echo "Start 'make api' in one terminal, then 'ngrok http 8000' in another."
 	@echo "Copy the ngrok URL and paste it into the frontend at f1.loukik.dev"
+
+export:
+	. .venv/bin/activate && python -m src.pipeline.run export --season $(SEASON)
+
+publish:
+	. .venv/bin/activate && python -m src.pipeline.run export --season $(SEASON) --push
+
+publish-round:
+	. .venv/bin/activate && python -m src.pipeline.run predict --season $(SEASON) --round $(ROUND) --stage $(STAGE) && \
+	python -m src.pipeline.run export --season $(SEASON) --round $(ROUND) --push
+
+schedule:
+	. .venv/bin/activate && python -m src.pipeline.run schedule
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; true

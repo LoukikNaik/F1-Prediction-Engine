@@ -1,0 +1,852 @@
+{
+  "Alexander Albon": [
+    {
+      "season": 2025,
+      "grid": 10,
+      "position": 7,
+      "status": "Finished",
+      "points": 6.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 14,
+      "position": 12,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 0,
+      "position": 10,
+      "status": "+1 Lap",
+      "points": 1.0,
+      "laps": 55
+    }
+  ],
+  "Andrea Kimi Antonelli": [
+    {
+      "season": 2025,
+      "grid": 8,
+      "position": 6,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 56
+    }
+  ],
+  "Carlos Sainz": [
+    {
+      "season": 2025,
+      "grid": 15,
+      "position": 10,
+      "status": "Finished",
+      "points": 1.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 7,
+      "position": 5,
+      "status": "Finished",
+      "points": 10.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 14,
+      "position": 14,
+      "status": "+1 Lap",
+      "points": 0.0,
+      "laps": 55
+    },
+    {
+      "season": 2018,
+      "grid": 9,
+      "position": 9,
+      "status": "Finished",
+      "points": 2.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 11,
+      "position": 7,
+      "status": "Finished",
+      "points": 6.0,
+      "laps": 56
+    },
+    {
+      "season": 2016,
+      "grid": 8,
+      "position": 9,
+      "status": "Finished",
+      "points": 2.0,
+      "laps": 56
+    },
+    {
+      "season": 2015,
+      "grid": 14,
+      "position": 13,
+      "status": "+1 Lap",
+      "points": 0.0,
+      "laps": 55
+    }
+  ],
+  "Charles Leclerc": [
+    {
+      "season": 2025,
+      "grid": 6,
+      "position": 18,
+      "status": "Disqualified",
+      "points": 0.0,
+      "laps": 0
+    },
+    {
+      "season": 2024,
+      "grid": 6,
+      "position": 4,
+      "status": "Finished",
+      "points": 12.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 4,
+      "position": 5,
+      "status": "Finished",
+      "points": 10.0,
+      "laps": 56
+    },
+    {
+      "season": 2018,
+      "grid": 19,
+      "position": 19,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    }
+  ],
+  "Esteban Ocon": [
+    {
+      "season": 2025,
+      "grid": 11,
+      "position": 5,
+      "status": "Finished",
+      "points": 10.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 13,
+      "position": 11,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2018,
+      "grid": 12,
+      "position": 11,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 17,
+      "position": 10,
+      "status": "+1 Lap",
+      "points": 1.0,
+      "laps": 55
+    }
+  ],
+  "Fernando Alonso": [
+    {
+      "season": 2025,
+      "grid": 13,
+      "position": 17,
+      "status": "Retired",
+      "points": 0.0,
+      "laps": 4
+    },
+    {
+      "season": 2024,
+      "grid": 3,
+      "position": 7,
+      "status": "Finished",
+      "points": 7.0,
+      "laps": 56
+    },
+    {
+      "season": 2018,
+      "grid": 13,
+      "position": 7,
+      "status": "Finished",
+      "points": 6.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 13,
+      "position": 16,
+      "status": "Driveshaft",
+      "points": 0.0,
+      "laps": 33
+    },
+    {
+      "season": 2016,
+      "grid": 11,
+      "position": 12,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2015,
+      "grid": 18,
+      "position": 12,
+      "status": "+1 Lap",
+      "points": 0.0,
+      "laps": 55
+    },
+    {
+      "season": 2014,
+      "grid": 5,
+      "position": 3,
+      "status": "Finished",
+      "points": 15.0,
+      "laps": 54
+    },
+    {
+      "season": 2013,
+      "grid": 3,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 56
+    },
+    {
+      "season": 2012,
+      "grid": 9,
+      "position": 9,
+      "status": "Finished",
+      "points": 2.0,
+      "laps": 56
+    },
+    {
+      "season": 2011,
+      "grid": 5,
+      "position": 7,
+      "status": "Finished",
+      "points": 6.0,
+      "laps": 56
+    },
+    {
+      "season": 2010,
+      "grid": 3,
+      "position": 4,
+      "status": "Finished",
+      "points": 12.0,
+      "laps": 56
+    },
+    {
+      "season": 2009,
+      "grid": 2,
+      "position": 9,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2008,
+      "grid": 4,
+      "position": 4,
+      "status": "Finished",
+      "points": 5.0,
+      "laps": 56
+    },
+    {
+      "season": 2007,
+      "grid": 4,
+      "position": 2,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 56
+    },
+    {
+      "season": 2006,
+      "grid": 1,
+      "position": 2,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 56
+    },
+    {
+      "season": 2005,
+      "grid": 1,
+      "position": 1,
+      "status": "Finished",
+      "points": 10.0,
+      "laps": 56
+    },
+    {
+      "season": 2004,
+      "grid": 6,
+      "position": 4,
+      "status": "Finished",
+      "points": 5.0,
+      "laps": 56
+    }
+  ],
+  "Gabriel Bortoleto": [
+    {
+      "season": 2025,
+      "grid": 19,
+      "position": 14,
+      "status": "Lapped",
+      "points": 0.0,
+      "laps": 55
+    }
+  ],
+  "George Russell": [
+    {
+      "season": 2025,
+      "grid": 2,
+      "position": 3,
+      "status": "Finished",
+      "points": 15.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 8,
+      "position": 6,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 17,
+      "position": 16,
+      "status": "+2 Laps",
+      "points": 0.0,
+      "laps": 54
+    }
+  ],
+  "Isack Hadjar": [
+    {
+      "season": 2025,
+      "grid": 7,
+      "position": 11,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    }
+  ],
+  "Jack Doohan": [
+    {
+      "season": 2025,
+      "grid": 18,
+      "position": 13,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    }
+  ],
+  "Lance Stroll": [
+    {
+      "season": 2025,
+      "grid": 14,
+      "position": 9,
+      "status": "Finished",
+      "points": 2.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 11,
+      "position": 15,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 16,
+      "position": 12,
+      "status": "+1 Lap",
+      "points": 0.0,
+      "laps": 55
+    },
+    {
+      "season": 2018,
+      "grid": 18,
+      "position": 14,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 10,
+      "position": 20,
+      "status": "Collision",
+      "points": 0.0,
+      "laps": 0
+    }
+  ],
+  "Lando Norris": [
+    {
+      "season": 2025,
+      "grid": 3,
+      "position": 2,
+      "status": "Finished",
+      "points": 18.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 4,
+      "position": 2,
+      "status": "Finished",
+      "points": 18.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 15,
+      "position": 18,
+      "status": "Collision",
+      "points": 0.0,
+      "laps": 50
+    }
+  ],
+  "Lewis Hamilton": [
+    {
+      "season": 2025,
+      "grid": 5,
+      "position": 19,
+      "status": "Disqualified",
+      "points": 0.0,
+      "laps": 0
+    },
+    {
+      "season": 2024,
+      "grid": 18,
+      "position": 9,
+      "status": "Finished",
+      "points": 2.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 2,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 56
+    },
+    {
+      "season": 2018,
+      "grid": 4,
+      "position": 4,
+      "status": "Finished",
+      "points": 12.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 1,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 56
+    },
+    {
+      "season": 2016,
+      "grid": 22,
+      "position": 7,
+      "status": "Finished",
+      "points": 6.0,
+      "laps": 56
+    },
+    {
+      "season": 2015,
+      "grid": 1,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 56
+    },
+    {
+      "season": 2014,
+      "grid": 1,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 54
+    },
+    {
+      "season": 2013,
+      "grid": 1,
+      "position": 3,
+      "status": "Finished",
+      "points": 15.0,
+      "laps": 56
+    },
+    {
+      "season": 2012,
+      "grid": 7,
+      "position": 3,
+      "status": "Finished",
+      "points": 15.0,
+      "laps": 56
+    },
+    {
+      "season": 2011,
+      "grid": 3,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 56
+    },
+    {
+      "season": 2010,
+      "grid": 6,
+      "position": 2,
+      "status": "Finished",
+      "points": 18.0,
+      "laps": 56
+    },
+    {
+      "season": 2009,
+      "grid": 9,
+      "position": 6,
+      "status": "Finished",
+      "points": 3.0,
+      "laps": 56
+    },
+    {
+      "season": 2008,
+      "grid": 1,
+      "position": 1,
+      "status": "Finished",
+      "points": 10.0,
+      "laps": 56
+    },
+    {
+      "season": 2007,
+      "grid": 1,
+      "position": 19,
+      "status": "Spun off",
+      "points": 0.0,
+      "laps": 30
+    }
+  ],
+  "Liam Lawson": [
+    {
+      "season": 2025,
+      "grid": 20,
+      "position": 12,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    }
+  ],
+  "Max Verstappen": [
+    {
+      "season": 2025,
+      "grid": 4,
+      "position": 4,
+      "status": "Finished",
+      "points": 12.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 1,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 5,
+      "position": 4,
+      "status": "Finished",
+      "points": 12.0,
+      "laps": 56
+    },
+    {
+      "season": 2018,
+      "grid": 5,
+      "position": 5,
+      "status": "Finished",
+      "points": 10.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 16,
+      "position": 3,
+      "status": "Finished",
+      "points": 15.0,
+      "laps": 56
+    },
+    {
+      "season": 2016,
+      "grid": 9,
+      "position": 8,
+      "status": "Finished",
+      "points": 4.0,
+      "laps": 56
+    },
+    {
+      "season": 2015,
+      "grid": 13,
+      "position": 17,
+      "status": "Transmission",
+      "points": 0.0,
+      "laps": 52
+    }
+  ],
+  "Nico Hülkenberg": [
+    {
+      "season": 2025,
+      "grid": 12,
+      "position": 15,
+      "status": "Lapped",
+      "points": 0.0,
+      "laps": 55
+    },
+    {
+      "season": 2024,
+      "grid": 9,
+      "position": 10,
+      "status": "Finished",
+      "points": 1.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 8,
+      "position": 20,
+      "status": "Power Unit",
+      "points": 0.0,
+      "laps": 16
+    },
+    {
+      "season": 2018,
+      "grid": 7,
+      "position": 6,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 7,
+      "position": 12,
+      "status": "+1 Lap",
+      "points": 0.0,
+      "laps": 55
+    },
+    {
+      "season": 2016,
+      "grid": 13,
+      "position": 15,
+      "status": "+1 Lap",
+      "points": 0.0,
+      "laps": 55
+    },
+    {
+      "season": 2015,
+      "grid": 16,
+      "position": 20,
+      "status": "Gearbox",
+      "points": 0.0,
+      "laps": 9
+    },
+    {
+      "season": 2014,
+      "grid": 8,
+      "position": 6,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 54
+    },
+    {
+      "season": 2013,
+      "grid": 10,
+      "position": 10,
+      "status": "Finished",
+      "points": 1.0,
+      "laps": 56
+    },
+    {
+      "season": 2012,
+      "grid": 16,
+      "position": 15,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2010,
+      "grid": 16,
+      "position": 15,
+      "status": "+1 Lap",
+      "points": 0.0,
+      "laps": 55
+    }
+  ],
+  "Oliver Bearman": [
+    {
+      "season": 2025,
+      "grid": 17,
+      "position": 8,
+      "status": "Finished",
+      "points": 4.0,
+      "laps": 56
+    }
+  ],
+  "Oscar Piastri": [
+    {
+      "season": 2025,
+      "grid": 1,
+      "position": 1,
+      "status": "Finished",
+      "points": 25.0,
+      "laps": 56
+    },
+    {
+      "season": 2024,
+      "grid": 5,
+      "position": 8,
+      "status": "Finished",
+      "points": 4.0,
+      "laps": 56
+    }
+  ],
+  "Pierre Gasly": [
+    {
+      "season": 2025,
+      "grid": 16,
+      "position": 20,
+      "status": "Disqualified",
+      "points": 0.0,
+      "laps": 0
+    },
+    {
+      "season": 2024,
+      "grid": 15,
+      "position": 13,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    },
+    {
+      "season": 2019,
+      "grid": 6,
+      "position": 6,
+      "status": "Finished",
+      "points": 9.0,
+      "laps": 56
+    },
+    {
+      "season": 2018,
+      "grid": 17,
+      "position": 18,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    }
+  ],
+  "Valtteri Bottas": [
+    {
+      "season": 2024,
+      "grid": 10,
+      "position": 20,
+      "status": "Retired",
+      "points": 0.0,
+      "laps": 19
+    },
+    {
+      "season": 2019,
+      "grid": 1,
+      "position": 2,
+      "status": "Finished",
+      "points": 18.0,
+      "laps": 56
+    },
+    {
+      "season": 2018,
+      "grid": 3,
+      "position": 2,
+      "status": "Finished",
+      "points": 18.0,
+      "laps": 56
+    },
+    {
+      "season": 2017,
+      "grid": 3,
+      "position": 6,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 56
+    },
+    {
+      "season": 2016,
+      "grid": 5,
+      "position": 10,
+      "status": "Finished",
+      "points": 1.0,
+      "laps": 56
+    },
+    {
+      "season": 2015,
+      "grid": 5,
+      "position": 6,
+      "status": "Finished",
+      "points": 8.0,
+      "laps": 56
+    },
+    {
+      "season": 2014,
+      "grid": 7,
+      "position": 7,
+      "status": "Finished",
+      "points": 6.0,
+      "laps": 54
+    },
+    {
+      "season": 2013,
+      "grid": 16,
+      "position": 13,
+      "status": "Finished",
+      "points": 0.0,
+      "laps": 56
+    }
+  ],
+  "Yuki Tsunoda": [
+    {
+      "season": 2025,
+      "grid": 9,
+      "position": 16,
+      "status": "Lapped",
+      "points": 0.0,
+      "laps": 55
+    },
+    {
+      "season": 2024,
+      "grid": 19,
+      "position": 19,
+      "status": "Retired",
+      "points": 0.0,
+      "laps": 26
+    }
+  ]
+}

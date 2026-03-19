@@ -1,0 +1,137 @@
+{
+  "records": [
+    {
+      "driver_name": "George Russell",
+      "driver_code": "RUS",
+      "position": 1,
+      "points": 25.0
+    },
+    {
+      "driver_name": "Andrea Kimi Antonelli",
+      "driver_code": "ANT",
+      "position": 2,
+      "points": 18.0
+    },
+    {
+      "driver_name": "Charles Leclerc",
+      "driver_code": "LEC",
+      "position": 3,
+      "points": 15.0
+    },
+    {
+      "driver_name": "Lewis Hamilton",
+      "driver_code": "HAM",
+      "position": 4,
+      "points": 12.0
+    },
+    {
+      "driver_name": "Lando Norris",
+      "driver_code": "NOR",
+      "position": 5,
+      "points": 10.0
+    },
+    {
+      "driver_name": "Max Verstappen",
+      "driver_code": "VER",
+      "position": 6,
+      "points": 8.0
+    },
+    {
+      "driver_name": "Oliver Bearman",
+      "driver_code": "BEA",
+      "position": 7,
+      "points": 6.0
+    },
+    {
+      "driver_name": "Arvid Lindblad",
+      "driver_code": "LIN",
+      "position": 8,
+      "points": 4.0
+    },
+    {
+      "driver_name": "Gabriel Bortoleto",
+      "driver_code": "BOR",
+      "position": 9,
+      "points": 2.0
+    },
+    {
+      "driver_name": "Pierre Gasly",
+      "driver_code": "GAS",
+      "position": 10,
+      "points": 1.0
+    },
+    {
+      "driver_name": "Esteban Ocon",
+      "driver_code": "OCO",
+      "position": 11,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Alexander Albon",
+      "driver_code": "ALB",
+      "position": 12,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Liam Lawson",
+      "driver_code": "LAW",
+      "position": 13,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Franco Colapinto",
+      "driver_code": "COL",
+      "position": 14,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Carlos Sainz",
+      "driver_code": "SAI",
+      "position": 15,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Sergio Perez",
+      "driver_code": "PER",
+      "position": 16,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Lance Stroll",
+      "driver_code": "STR",
+      "position": 17,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Fernando Alonso",
+      "driver_code": "ALO",
+      "position": 18,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Valtteri Bottas",
+      "driver_code": "BOT",
+      "position": 19,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Isack Hadjar",
+      "driver_code": "HAD",
+      "position": 20,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Oscar Piastri",
+      "driver_code": "PIA",
+      "position": 21,
+      "points": 0.0
+    },
+    {
+      "driver_name": "Nico Hulkenberg",
+      "driver_code": "HUL",
+      "position": 22,
+      "points": 0.0
+    }
+  ],
+  "season": 2026
+}

@@ -147,6 +147,47 @@ def migrate():
 
 
 @app.command()
+def export(
+    season: int = typer.Option(2026, help="Season to export"),
+    round: int = typer.Option(None, help="Specific round to export (default: all)"),
+    push: bool = typer.Option(False, help="Git add, commit, and push after export"),
+):
+    """Export prediction data as static JSON for GitHub Pages."""
+    import subprocess
+
+    from config.settings import PROJECT_ROOT
+    from src.export.json_exporter import export_round as _export_round
+    from src.export.json_exporter import export_season as _export_season
+
+    output_dir = PROJECT_ROOT / "frontend" / "data"
+
+    if round is not None:
+        _export_round(season, round, output_dir)
+    else:
+        _export_season(season, output_dir)
+
+    if push:
+        data_path = str(output_dir)
+        subprocess.run(["git", "add", data_path], check=True)
+        msg = f"Update predictions: {season}"
+        if round is not None:
+            msg += f" R{round}"
+        subprocess.run(["git", "commit", "-m", msg], check=True)
+        subprocess.run(["git", "push"], check=True)
+        logger.info("Pushed to remote")
+
+
+@app.command()
+def schedule(
+    races: int = typer.Option(2, help="Number of upcoming weekends to schedule"),
+):
+    """Schedule automatic prediction runs for upcoming race weekends via launchd."""
+    from scripts.schedule_weekend import schedule_weekends
+
+    schedule_weekends(n_races=races)
+
+
+@app.command()
 def info():
     """Show database statistics."""
     from sqlalchemy import func

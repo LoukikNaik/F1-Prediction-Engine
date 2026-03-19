@@ -1,0 +1,204 @@
+{
+  "races": [
+    {
+      "round": 1,
+      "race_name": "Australian Grand Prix",
+      "circuit_name": "Albert Park Grand Prix Circuit",
+      "country": "Australia",
+      "available_stages": [
+        "race_eve",
+        "post_qualifying",
+        "pre_weekend"
+      ],
+      "has_live": true
+    },
+    {
+      "round": 2,
+      "race_name": "Chinese Grand Prix",
+      "circuit_name": "Shanghai International Circuit",
+      "country": "China",
+      "available_stages": [
+        "race_eve",
+        "post_qualifying",
+        "pre_weekend"
+      ],
+      "has_live": false
+    },
+    {
+      "round": 3,
+      "race_name": "Japanese Grand Prix",
+      "circuit_name": "Suzuka Circuit",
+      "country": "Japan",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 4,
+      "race_name": "Bahrain Grand Prix",
+      "circuit_name": "Bahrain International Circuit",
+      "country": "Bahrain",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 5,
+      "race_name": "Saudi Arabian Grand Prix",
+      "circuit_name": "Jeddah Corniche Circuit",
+      "country": "Saudi Arabia",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 6,
+      "race_name": "Miami Grand Prix",
+      "circuit_name": "Miami International Autodrome",
+      "country": "USA",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 7,
+      "race_name": "Canadian Grand Prix",
+      "circuit_name": "Circuit Gilles Villeneuve",
+      "country": "Canada",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 8,
+      "race_name": "Monaco Grand Prix",
+      "circuit_name": "Circuit de Monaco",
+      "country": "Monaco",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 9,
+      "race_name": "Barcelona Grand Prix",
+      "circuit_name": "Circuit de Barcelona-Catalunya",
+      "country": "Spain",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 10,
+      "race_name": "Austrian Grand Prix",
+      "circuit_name": "Red Bull Ring",
+      "country": "Austria",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 11,
+      "race_name": "British Grand Prix",
+      "circuit_name": "Silverstone Circuit",
+      "country": "UK",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 12,
+      "race_name": "Belgian Grand Prix",
+      "circuit_name": "Circuit de Spa-Francorchamps",
+      "country": "Belgium",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 13,
+      "race_name": "Hungarian Grand Prix",
+      "circuit_name": "Hungaroring",
+      "country": "Hungary",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 14,
+      "race_name": "Dutch Grand Prix",
+      "circuit_name": "Circuit Park Zandvoort",
+      "country": "Netherlands",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 15,
+      "race_name": "Italian Grand Prix",
+      "circuit_name": "Autodromo Nazionale di Monza",
+      "country": "Italy",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 16,
+      "race_name": "Spanish Grand Prix",
+      "circuit_name": "Madring",
+      "country": "Spain",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 17,
+      "race_name": "Azerbaijan Grand Prix",
+      "circuit_name": "Baku City Circuit",
+      "country": "Azerbaijan",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 18,
+      "race_name": "Singapore Grand Prix",
+      "circuit_name": "Marina Bay Street Circuit",
+      "country": "Singapore",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 19,
+      "race_name": "United States Grand Prix",
+      "circuit_name": "Circuit of the Americas",
+      "country": "USA",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 20,
+      "race_name": "Mexico City Grand Prix",
+      "circuit_name": "Autódromo Hermanos Rodríguez",
+      "country": "Mexico",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 21,
+      "race_name": "Brazilian Grand Prix",
+      "circuit_name": "Autódromo José Carlos Pace",
+      "country": "Brazil",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 22,
+      "race_name": "Las Vegas Grand Prix",
+      "circuit_name": "Las Vegas Strip Street Circuit",
+      "country": "USA",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 23,
+      "race_name": "Qatar Grand Prix",
+      "circuit_name": "Losail International Circuit",
+      "country": "Qatar",
+      "available_stages": [],
+      "has_live": false
+    },
+    {
+      "round": 24,
+      "race_name": "Abu Dhabi Grand Prix",
+      "circuit_name": "Yas Marina Circuit",
+      "country": "UAE",
+      "available_stages": [],
+      "has_live": false
+    }
+  ]
+}
