@@ -843,6 +843,16 @@ function renderDashboard(lap) {
   html += renderFullTable(rows);
   html += '</div>';
 
+  // --- Championship Standings Evolution ---
+  html += '<hr class="divider"><div class="section">';
+  html += '<h3>Championship Standings — Driver (WDC)</h3>';
+  html += '<div id="chartWDC"></div>';
+  html += '</div>';
+  html += '<div class="section" style="margin-top:16px">';
+  html += '<h3>Championship Standings — Constructor (WCC)</h3>';
+  html += '<div id="chartWCC"></div>';
+  html += '</div>';
+
   // --- Evolution (only if live lap data exists) ---
   if (availableLaps.length > 0) {
     html += '<hr class="divider"><div class="section">';
@@ -873,6 +883,7 @@ function renderDashboard(lap) {
     renderProbChart("chartWinProb", rows, "win_prob", "Win Probability");
     renderProbChart("chartPodiumProb", rows, "podium_prob", "Podium Probability");
     renderHeatmap(rows);
+    renderStandingsEvolution();
     if (availableLaps.length > 0) {
       renderEvolutionCharts(lap);
       await loadDriverEvolution();
@@ -1016,6 +1027,85 @@ function renderHeatmap(rows) {
     xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Position", dtick: 1},
     yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, automargin: true, autorange: "reversed"},
     margin: {l: 140, r: 20, t: 10, b: 40}
+  }, {responsive: true, displayModeBar: false});
+}
+
+async function renderStandingsEvolution() {
+  const season = +document.getElementById("season").value;
+  const wdcEl = document.getElementById("chartWDC");
+  const wccEl = document.getElementById("chartWCC");
+  if (!wdcEl || !wccEl) return;
+
+  // Fetch standings evolution data
+  let data;
+  try {
+    if (dataMode === "static") {
+      const res = await fetch(`./data/${season}/standings_evolution.json`);
+      if (!res.ok) { wdcEl.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">No standings data available.</div>'; return; }
+      data = await res.json();
+    } else {
+      // API mode — not implemented yet, skip
+      wdcEl.innerHTML = ''; wccEl.innerHTML = '';
+      return;
+    }
+  } catch { wdcEl.innerHTML = ''; wccEl.innerHTML = ''; return; }
+
+  const wdc = data.wdc || {};
+  const wcc = data.wcc || {};
+
+  // WDC chart — top 10 by final points
+  const driverNames = Object.keys(wdc);
+  const driverFinal = driverNames.map(n => {
+    const entries = wdc[n];
+    return {name: n, pts: entries.length ? entries[entries.length-1].points : 0};
+  }).sort((a,b) => b.pts - a.pts);
+  const topDrivers = driverFinal.slice(0, 10).map(d => d.name);
+
+  const wdcTraces = topDrivers.map(name => {
+    const entries = wdc[name];
+    const team = teamMapping[name] || "";
+    return {
+      x: entries.map(e => e.round),
+      y: entries.map(e => e.points),
+      name: name,
+      type: "scatter", mode: "lines+markers",
+      line: {color: TEAM_COLORS[team] || "#888", width: 2.5},
+      marker: {size: 4},
+      hovertemplate: `${name}<br>R%{x}: %{y} pts<extra></extra>`
+    };
+  });
+
+  Plotly.newPlot(wdcEl, wdcTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    height: 420,
+    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Round", dtick: 1},
+    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Points"},
+    legend: {font: {size: 10}},
+    margin: {l: 60, r: 20, t: 10, b: 40}
+  }, {responsive: true, displayModeBar: false});
+
+  // WCC chart — all teams
+  const teamNames = Object.keys(wcc);
+  const wccTraces = teamNames.map(name => {
+    const entries = wcc[name];
+    return {
+      x: entries.map(e => e.round),
+      y: entries.map(e => e.points),
+      name: name,
+      type: "scatter", mode: "lines+markers",
+      line: {color: TEAM_COLORS[name] || "#888", width: 2.5},
+      marker: {size: 4},
+      hovertemplate: `${name}<br>R%{x}: %{y} pts<extra></extra>`
+    };
+  });
+
+  Plotly.newPlot(wccEl, wccTraces, {
+    ...PLOTLY_LAYOUT_BASE,
+    height: 420,
+    xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Round", dtick: 1},
+    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Points"},
+    legend: {font: {size: 10}},
+    margin: {l: 60, r: 20, t: 10, b: 40}
   }, {responsive: true, displayModeBar: false});
 }
 
