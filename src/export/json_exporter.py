@@ -15,9 +15,9 @@ STAGE_PRIORITY = ("race_eve", "post_sprint", "post_qualifying", "pre_weekend")
 
 
 def _write_json(path: Path, data: dict | list) -> None:
-    """Write data as formatted JSON, creating parent dirs as needed."""
+    """Write data as compact JSON, creating parent dirs as needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    path.write_text(json.dumps(data, separators=(",", ":"), ensure_ascii=False))
     logger.info(f"Wrote {path}")
 
 

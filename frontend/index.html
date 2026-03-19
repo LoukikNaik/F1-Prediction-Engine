@@ -639,13 +639,18 @@ async function loadAll() {
 
   circuitHistoryCache = {};  // Clear cache on race change
 
-  // Parallel fetch: laps, teams, standings
+  // Check if this round has live data before fetching laps
+  const raceInfo = racesForSeason.find(r => r.round === round);
+  const hasLive = raceInfo ? raceInfo.has_live : false;
+
+  // Parallel fetch: laps (only if live), teams, standings
   try {
-    const [lapsRes, teamsRes, standingsRes] = await Promise.all([
-      apiFetch(`/api/laps?season=${season}&round=${round}`),
+    const fetches = [
+      hasLive ? apiFetch(`/api/laps?season=${season}&round=${round}`) : Promise.resolve({laps: []}),
       apiFetch(`/api/teams?season=${season}`),
       apiFetch(`/api/standings?season=${season}`)
-    ]);
+    ];
+    const [lapsRes, teamsRes, standingsRes] = await Promise.all(fetches);
 
     availableLaps = lapsRes.laps || [];
     teamMapping = teamsRes.mapping || {};
