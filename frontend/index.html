@@ -1113,11 +1113,16 @@ async function loadDriverEvolution() {
 
   try {
     let records;
-    if (dataMode === "static" && evolutionData.length) {
-      // Filter from already-loaded evolution data
-      records = evolutionData
-        .filter(r => r.driver_name === driver)
-        .sort((a, b) => a.lap - b.lap);
+    if (dataMode === "static" && availableLaps.length) {
+      // Use pre-built driver_evolution.json (all drivers, all laps, with P1-P10)
+      if (!window._driverEvoCache || window._driverEvoCacheKey !== `${season}_${round}`) {
+        try {
+          const res = await fetch(`./data/${season}/r${round}/live/driver_evolution.json`);
+          window._driverEvoCache = res.ok ? await res.json() : {};
+          window._driverEvoCacheKey = `${season}_${round}`;
+        } catch { window._driverEvoCache = {}; }
+      }
+      records = (window._driverEvoCache[driver] || []).sort((a, b) => a.lap - b.lap);
     } else {
       const res = await apiFetch(`/api/driver-evolution?season=${season}&round=${round}&driver=${encodeURIComponent(driver)}`);
       records = res.records || [];

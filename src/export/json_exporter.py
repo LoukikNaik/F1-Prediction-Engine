@@ -278,6 +278,23 @@ def _export_live_data(season: int, round_num: int, output_dir: Path) -> None:
             records.append(rec)
         _write_json(live_dir / "evolution.json", {"records": records})
 
+    # Driver evolution: per-driver position probabilities across laps (P1-P10+)
+    # Built from the per-lap matrix parquets so the frontend doesn't need N fetches
+    driver_evo: dict[str, list[dict]] = {}
+    for lap in laps:
+        lap_path = LIVE_PREDICTIONS_DIR / f"matrix_{season}_r{round_num}_lap{lap}.parquet"
+        if not lap_path.exists():
+            continue
+        df = pd.read_parquet(lap_path)
+        for driver_name in df.index:
+            row = df.loc[driver_name]
+            rec: dict = {"lap": lap}
+            for col in df.columns:
+                rec[col] = to_json_safe(row[col])
+            driver_evo.setdefault(driver_name, []).append(rec)
+    if driver_evo:
+        _write_json(live_dir / "driver_evolution.json", driver_evo)
+
 
 def export_round(season: int, round_num: int, output_dir: Path) -> None:
     """Export all data for a single round."""
