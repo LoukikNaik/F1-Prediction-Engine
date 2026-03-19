@@ -843,25 +843,27 @@ function renderDashboard(lap) {
   html += renderFullTable(rows);
   html += '</div>';
 
-  // --- Evolution ---
-  html += '<hr class="divider"><div class="section">';
-  html += '<h3>Prediction Evolution</h3>';
-  html += '<div id="chartEvoWin"></div>';
-  html += '<div id="chartEvoPos" style="margin-top:16px"></div>';
-  html += '</div>';
+  // --- Evolution (only if live lap data exists) ---
+  if (availableLaps.length > 0) {
+    html += '<hr class="divider"><div class="section">';
+    html += '<h3>Prediction Evolution</h3>';
+    html += '<div id="chartEvoWin"></div>';
+    html += '<div id="chartEvoPos" style="margin-top:16px"></div>';
+    html += '</div>';
 
-  // --- Driver Position Probabilities Over Laps ---
-  html += '<hr class="divider"><div class="section">';
-  html += '<h3>Driver Position Probabilities Over Laps</h3>';
-  html += '<div style="margin-bottom:12px"><label style="font-size:0.85rem;color:var(--text2);margin-right:8px">Driver:</label>';
-  html += '<select id="driverEvoSelect" onchange="loadDriverEvolution()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem">';
-  rows.forEach(r => {
-    const selected = r.driver_name === rows[0].driver_name ? " selected" : "";
-    html += `<option value="${r.driver_name}"${selected}>${r.driver_name}</option>`;
-  });
-  html += '</select></div>';
-  html += '<div id="chartDriverEvo"></div>';
-  html += '</div>';
+    // --- Driver Position Probabilities Over Laps ---
+    html += '<hr class="divider"><div class="section">';
+    html += '<h3>Driver Position Probabilities Over Laps</h3>';
+    html += '<div style="margin-bottom:12px"><label style="font-size:0.85rem;color:var(--text2);margin-right:8px">Driver:</label>';
+    html += '<select id="driverEvoSelect" onchange="loadDriverEvolution()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem">';
+    rows.forEach(r => {
+      const selected = r.driver_name === rows[0].driver_name ? " selected" : "";
+      html += `<option value="${r.driver_name}"${selected}>${r.driver_name}</option>`;
+    });
+    html += '</select></div>';
+    html += '<div id="chartDriverEvo"></div>';
+    html += '</div>';
+  }
 
   document.getElementById("mainContent").innerHTML = html;
 
@@ -871,8 +873,10 @@ function renderDashboard(lap) {
     renderProbChart("chartWinProb", rows, "win_prob", "Win Probability");
     renderProbChart("chartPodiumProb", rows, "podium_prob", "Podium Probability");
     renderHeatmap(rows);
-    renderEvolutionCharts(lap);
-    await loadDriverEvolution();
+    if (availableLaps.length > 0) {
+      renderEvolutionCharts(lap);
+      await loadDriverEvolution();
+    }
   });
 }
 
