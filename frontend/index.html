@@ -1269,7 +1269,11 @@ function updateStageActiveClass() {
    INIT
    ================================================================ */
 window.addEventListener("DOMContentLoaded", async () => {
-  // Try URL param first, then localStorage, then static data
+  // Try static data first — works on GitHub Pages without any server
+  const staticLoaded = await tryStaticMode();
+  if (staticLoaded) return;
+
+  // Fall back to API mode: URL param > localStorage
   const paramUrl = getApiFromParams();
   const savedUrl = localStorage.getItem("f1_api_url") || "";
   const initUrl = paramUrl || savedUrl;
@@ -1278,13 +1282,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("apiUrl").value = initUrl;
     connect();
   } else {
-    // Try static mode — load from ./data/
-    const loaded = await tryStaticMode();
-    if (!loaded) {
-      document.getElementById("noData").innerHTML =
-        '<div class="no-data"><h2>No Data Available</h2>' +
-        '<p>Paste a backend URL above to connect, or add <code>?api=URL</code> to this page\'s URL.</p></div>';
-    }
+    document.getElementById("noData").innerHTML =
+      '<div class="no-data"><h2>No Data Available</h2>' +
+      '<p>Paste a backend URL above to connect, or add <code>?api=URL</code> to this page\'s URL.</p></div>';
   }
 });
 </script>
