@@ -1,7 +1,5 @@
 """Championship prediction via Monte Carlo simulation of remaining season."""
 
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -13,11 +11,10 @@ from src.database.models import (
     Driver,
     Race,
     Result,
-    Standing,
     Team,
 )
 from src.database.queries import get_races_for_season
-from src.utils.constants import GRID_SIZE, POINTS_SYSTEM, SPRINT_POINTS_SYSTEM
+from src.utils.constants import POINTS_SYSTEM, SPRINT_POINTS_SYSTEM
 from src.utils.logger import logger
 
 
@@ -65,12 +62,12 @@ def predict_championship(
     if not remaining_races:
         logger.info("Season complete, no remaining races to simulate")
         # Return actual final standings as 100% probability
-        wdc_df = _standings_to_df(driver_points, driver_names, n_drivers=len(driver_names))
-        wcc_df = _standings_to_df(team_points, team_names, n_drivers=len(team_names))
+        wdc_df = _standings_to_df(driver_points, driver_names)
+        wcc_df = _standings_to_df(team_points, team_names)
         return wdc_df, wcc_df
 
     # Run simulations
-    wdc_df = _simulate_remaining_season(
+    wdc_df, wcc_df = _simulate_remaining_season(
         driver_points,
         driver_names,
         driver_team_map,
@@ -81,11 +78,6 @@ def predict_championship(
         n_simulations,
     )
 
-    # Build WCC from driver results
-    wcc_df = _build_wcc_from_wdc(
-        wdc_df, driver_team_map, team_points, team_names, n_simulations
-    )
-
     # Store results
     after_round = max(completed_rounds) if completed_rounds else 0
     with get_session() as session:
@@ -93,6 +85,112 @@ def predict_championship(
 
     logger.info("Championship prediction complete")
     return wdc_df, wcc_df
+
+
+def predict_championship_evolution(
+    season: int,
+    n_simulations: int = 2000,
+) -> dict[str, list[dict]]:
+    """Compute championship win probability after each round.
+
+    Returns:
+        Dict with 'wdc' and 'wcc' keys, each mapping entity name to
+        list of {round, p1_prob, expected_position, expected_points}.
+    """
+    logger.info(f"Computing {season} championship evolution ({n_simulations} sims/round)...")
+
+    with get_session() as session:
+        races = get_races_for_season(session, season)
+        if not races:
+            return {"wdc": {}, "wcc": {}}
+
+        # Find rounds that have results
+        rounds_with_results = []
+        for race in races:
+            count = session.query(Result).filter(Result.race_id == race.id).count()
+            if count > 0:
+                rounds_with_results.append(race.round)
+
+        # Load prediction matrices while session is open (Race objects need it)
+        race_predictions = _load_race_predictions(races)
+
+        # Eagerly extract race metadata so we can use it outside session
+        race_meta = [
+            {"round": r.round, "is_sprint_weekend": bool(r.is_sprint_weekend)}
+            for r in races
+        ]
+
+    if not rounds_with_results:
+        return {"wdc": {}, "wcc": {}}
+
+    wdc_evo: dict[str, list[dict]] = {}
+    wcc_evo: dict[str, list[dict]] = {}
+
+    # At each cutoff, simulate remaining season
+    for cutoff_round in rounds_with_results:
+        completed = [r for r in rounds_with_results if r <= cutoff_round]
+        remaining = [r for r in race_meta if r["round"] > cutoff_round]
+
+        with get_session() as session:
+            driver_points, driver_names, driver_team_map = _get_current_standings(
+                session, season, completed
+            )
+            team_points, team_names = _get_team_standings(
+                session, season, driver_points, driver_team_map
+            )
+
+        if not remaining:
+            # Season over at this cutoff — winner gets 100%
+            sorted_drivers = sorted(driver_points.items(), key=lambda x: -x[1])
+            for rank, (d_id, pts) in enumerate(sorted_drivers):
+                name = driver_names[d_id]
+                wdc_evo.setdefault(name, []).append({
+                    "round": cutoff_round,
+                    "p1_prob": 1.0 if rank == 0 else 0.0,
+                    "expected_position": rank + 1,
+                    "expected_points": round(pts, 1),
+                })
+            sorted_teams = sorted(team_points.items(), key=lambda x: -x[1])
+            for rank, (t_id, pts) in enumerate(sorted_teams):
+                name = team_names[t_id]
+                wcc_evo.setdefault(name, []).append({
+                    "round": cutoff_round,
+                    "p1_prob": 1.0 if rank == 0 else 0.0,
+                    "expected_position": rank + 1,
+                    "expected_points": round(pts, 1),
+                })
+            continue
+
+        # Filter predictions to only remaining races
+        remaining_predictions = {r["round"]: race_predictions.get(r["round"]) for r in remaining}
+
+        wdc_df, wcc_df = _simulate_remaining_season(
+            driver_points, driver_names, driver_team_map,
+            team_points, team_names,
+            remaining_predictions, remaining, n_simulations,
+        )
+
+        # Extract P1 prob for each driver
+        for name, row in wdc_df.iterrows():
+            wdc_evo.setdefault(name, []).append({
+                "round": cutoff_round,
+                "p1_prob": round(float(row.get("P1_prob", 0)), 4),
+                "expected_position": round(float(row["expected_position"]), 1),
+                "expected_points": round(float(row["expected_points"]), 1),
+            })
+
+        # Extract P1 prob for each team
+        for name, row in wcc_df.iterrows():
+            wcc_evo.setdefault(name, []).append({
+                "round": cutoff_round,
+                "p1_prob": round(float(row.get("P1_prob", 0)), 4),
+                "expected_position": round(float(row["expected_position"]), 1),
+                "expected_points": round(float(row["expected_points"]), 1),
+            })
+
+        logger.info(f"  R{cutoff_round}: done")
+
+    return {"wdc": wdc_evo, "wcc": wcc_evo}
 
 
 def _split_completed_remaining(
@@ -236,10 +334,14 @@ def _simulate_remaining_season(
     team_points: dict[int, float],
     team_names: dict[int, str],
     race_predictions: dict[int, pd.DataFrame | None],
-    remaining_races: list[Race],
+    remaining_races: list[Race] | list[dict],
     n_simulations: int,
-) -> pd.DataFrame:
-    """Run Monte Carlo simulation of remaining season for WDC."""
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Run Monte Carlo simulation of remaining season for WDC and WCC.
+
+    Returns:
+        Tuple of (wdc_df, wcc_df).
+    """
     rng = np.random.default_rng(RANDOM_SEED)
     driver_ids = sorted(driver_points.keys())
     n_drivers = len(driver_ids)
@@ -248,13 +350,21 @@ def _simulate_remaining_season(
     position_counts = np.zeros((n_drivers, n_drivers), dtype=int)
     total_points_all = np.zeros((n_drivers, n_simulations))
 
+    # Track team results
+    team_ids = sorted(team_points.keys())
+    n_teams = len(team_ids)
+    team_position_counts = np.zeros((n_teams, n_teams), dtype=int)
+    team_total_points_all = np.zeros((n_teams, n_simulations))
+
     for sim in range(n_simulations):
         # Start with current actual points
         sim_points = {d: driver_points[d] for d in driver_ids}
 
         for race in remaining_races:
-            pred_matrix = race_predictions.get(race.round)
-            is_sprint = bool(race.is_sprint_weekend)
+            rnd = race["round"] if isinstance(race, dict) else race.round
+            is_sprint_raw = race.get("is_sprint_weekend", False) if isinstance(race, dict) else race.is_sprint_weekend
+            pred_matrix = race_predictions.get(rnd)
+            is_sprint = bool(is_sprint_raw)
 
             if pred_matrix is not None:
                 # Sample finishing positions from probability distribution
@@ -278,7 +388,20 @@ def _simulate_remaining_season(
             position_counts[idx, rank] += 1
             total_points_all[idx, sim] = sim_points[d_id]
 
-    # Build result DataFrame
+        # Aggregate to team points and rank teams
+        sim_team_points = {t: team_points[t] for t in team_ids}
+        for d_id in driver_ids:
+            t_id = driver_team_map.get(d_id)
+            if t_id in sim_team_points:
+                sim_team_points[t_id] += sim_points[d_id] - driver_points[d_id]
+
+        sorted_teams = sorted(team_ids, key=lambda t: sim_team_points[t], reverse=True)
+        for rank, t_id in enumerate(sorted_teams):
+            idx = team_ids.index(t_id)
+            team_position_counts[idx, rank] += 1
+            team_total_points_all[idx, sim] = sim_team_points[t_id]
+
+    # Build WDC DataFrame
     prob_matrix = position_counts / n_simulations
     columns = {f"P{i+1}_prob": prob_matrix[:, i] for i in range(n_drivers)}
     columns["expected_points"] = total_points_all.mean(axis=1)
@@ -289,7 +412,18 @@ def _simulate_remaining_season(
     wdc_df = pd.DataFrame(columns, index=[driver_names[d] for d in driver_ids])
     wdc_df = wdc_df.sort_values("expected_position")
 
-    return wdc_df
+    # Build WCC DataFrame
+    team_prob_matrix = team_position_counts / n_simulations
+    t_columns = {f"P{i+1}_prob": team_prob_matrix[:, i] for i in range(n_teams)}
+    t_columns["expected_points"] = team_total_points_all.mean(axis=1)
+    t_columns["expected_position"] = (
+        team_prob_matrix * np.arange(1, n_teams + 1)
+    ).sum(axis=1)
+
+    wcc_df = pd.DataFrame(t_columns, index=[team_names[t] for t in team_ids])
+    wcc_df = wcc_df.sort_values("expected_position")
+
+    return wdc_df, wcc_df
 
 
 def _sample_race_results(
@@ -325,67 +459,10 @@ def _sample_race_results(
             sim_points[d_id] += SPRINT_POINTS_SYSTEM.get(sprint_pos, 0)
 
 
-def _build_wcc_from_wdc(
-    wdc_df: pd.DataFrame,
-    driver_team_map: dict[int, int],
-    team_points: dict[int, float],
-    team_names: dict[int, str],
-    n_simulations: int,
-) -> pd.DataFrame:
-    """Build WCC predictions from WDC simulation results."""
-    # Simple approach: use expected points aggregated by team
-    team_expected = {}
-    for team_id, name in team_names.items():
-        team_expected[name] = team_points.get(team_id, 0)
-
-    # Add expected remaining points from WDC predictions
-    driver_names_inv = {}
-    for d_id, t_id in driver_team_map.items():
-        if t_id in team_names:
-            t_name = team_names[t_id]
-            # Find this driver in wdc_df
-            for idx_name in wdc_df.index:
-                if idx_name in driver_names_inv:
-                    continue
-                # Match by checking if this driver is in the wdc_df
-                driver_names_inv[idx_name] = t_name
-
-    # Aggregate by team
-    wcc_data = {}
-    for team_name in team_names.values():
-        wcc_data[team_name] = {
-            "expected_points": 0.0,
-            "P1_prob": 0.0,
-        }
-
-    for d_id, t_id in driver_team_map.items():
-        if t_id not in team_names:
-            continue
-        t_name = team_names[t_id]
-        # Find driver's expected points in wdc_df
-        from src.database.connection import get_session
-        from src.database.models import Driver
-
-        with get_session() as session:
-            driver = session.query(Driver).get(d_id)
-            if driver and driver.full_name in wdc_df.index:
-                wcc_data[t_name]["expected_points"] += wdc_df.loc[
-                    driver.full_name, "expected_points"
-                ]
-
-    wcc_df = pd.DataFrame(wcc_data).T
-    wcc_df = wcc_df.sort_values("expected_points", ascending=False)
-
-    # Assign expected positions based on expected points ranking
-    wcc_df["expected_position"] = range(1, len(wcc_df) + 1)
-
-    return wcc_df
-
 
 def _standings_to_df(
     points: dict[int, float],
     names: dict[int, str],
-    n_drivers: int,
 ) -> pd.DataFrame:
     """Convert standings dict to DataFrame for completed season."""
     sorted_ids = sorted(points.keys(), key=lambda d: points[d], reverse=True)

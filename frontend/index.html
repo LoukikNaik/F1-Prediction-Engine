@@ -843,13 +843,13 @@ function renderDashboard(lap) {
   html += renderFullTable(rows);
   html += '</div>';
 
-  // --- Championship Standings Evolution ---
+  // --- Championship Win Probability Evolution ---
   html += '<hr class="divider"><div class="section">';
-  html += '<h3>Championship Standings — Driver (WDC)</h3>';
+  html += '<h3>Championship Win Probability — Driver (WDC)</h3>';
   html += '<div id="chartWDC"></div>';
   html += '</div>';
   html += '<div class="section" style="margin-top:16px">';
-  html += '<h3>Championship Standings — Constructor (WCC)</h3>';
+  html += '<h3>Championship Win Probability — Constructor (WCC)</h3>';
   html += '<div id="chartWCC"></div>';
   html += '</div>';
 
@@ -1053,25 +1053,26 @@ async function renderStandingsEvolution() {
   const wdc = data.wdc || {};
   const wcc = data.wcc || {};
 
-  // WDC chart — top 10 by final points
+  // WDC chart — top drivers by peak p1_prob
   const driverNames = Object.keys(wdc);
-  const driverFinal = driverNames.map(n => {
+  const driverPeak = driverNames.map(n => {
     const entries = wdc[n];
-    return {name: n, pts: entries.length ? entries[entries.length-1].points : 0};
-  }).sort((a,b) => b.pts - a.pts);
-  const topDrivers = driverFinal.slice(0, 10).map(d => d.name);
+    const peak = entries.length ? Math.max(...entries.map(e => e.p1_prob || 0)) : 0;
+    return {name: n, peak};
+  }).sort((a,b) => b.peak - a.peak);
+  const topDrivers = driverPeak.filter(d => d.peak > 0.001).slice(0, 10).map(d => d.name);
 
   const wdcTraces = topDrivers.map(name => {
     const entries = wdc[name];
     const team = teamMapping[name] || "";
     return {
       x: entries.map(e => e.round),
-      y: entries.map(e => e.points),
+      y: entries.map(e => (e.p1_prob || 0) * 100),
       name: name,
       type: "scatter", mode: "lines+markers",
       line: {color: TEAM_COLORS[team] || "#888", width: 2.5},
       marker: {size: 4},
-      hovertemplate: `${name}<br>R%{x}: %{y} pts<extra></extra>`
+      hovertemplate: `${name}<br>R%{x}: %{y:.1f}%<extra></extra>`
     };
   });
 
@@ -1079,23 +1080,30 @@ async function renderStandingsEvolution() {
     ...PLOTLY_LAYOUT_BASE,
     height: 420,
     xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Round", dtick: 1},
-    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Points"},
+    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Win Probability (%)", rangemode: "tozero"},
     legend: {font: {size: 10}},
     margin: {l: 60, r: 20, t: 10, b: 40}
   }, {responsive: true, displayModeBar: false});
 
-  // WCC chart — all teams
+  // WCC chart — all teams with non-zero probability
   const teamNames = Object.keys(wcc);
-  const wccTraces = teamNames.map(name => {
+  const teamPeak = teamNames.map(n => {
+    const entries = wcc[n];
+    const peak = entries.length ? Math.max(...entries.map(e => e.p1_prob || 0)) : 0;
+    return {name: n, peak};
+  }).sort((a,b) => b.peak - a.peak);
+  const topTeams = teamPeak.filter(t => t.peak > 0.001).map(t => t.name);
+
+  const wccTraces = topTeams.map(name => {
     const entries = wcc[name];
     return {
       x: entries.map(e => e.round),
-      y: entries.map(e => e.points),
+      y: entries.map(e => (e.p1_prob || 0) * 100),
       name: name,
       type: "scatter", mode: "lines+markers",
       line: {color: TEAM_COLORS[name] || "#888", width: 2.5},
       marker: {size: 4},
-      hovertemplate: `${name}<br>R%{x}: %{y} pts<extra></extra>`
+      hovertemplate: `${name}<br>R%{x}: %{y:.1f}%<extra></extra>`
     };
   });
 
@@ -1103,7 +1111,7 @@ async function renderStandingsEvolution() {
     ...PLOTLY_LAYOUT_BASE,
     height: 420,
     xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Round", dtick: 1},
-    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Points"},
+    yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Win Probability (%)", rangemode: "tozero"},
     legend: {font: {size: 10}},
     margin: {l: 60, r: 20, t: 10, b: 40}
   }, {responsive: true, displayModeBar: false});

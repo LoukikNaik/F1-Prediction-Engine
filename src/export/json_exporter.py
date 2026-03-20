@@ -312,76 +312,16 @@ def export_round(season: int, round_num: int, output_dir: Path) -> None:
 
 
 def _export_standings_evolution(season: int, output_dir: Path) -> None:
-    """Export cumulative WDC and WCC points after each round."""
-    with get_session() as session:
-        # Driver cumulative points
-        driver_rows = session.execute(
-            sql_text("""
-                SELECT d.full_name, ra.round, r.points
-                FROM results r
-                JOIN drivers d ON r.driver_id = d.id
-                JOIN races ra ON r.race_id = ra.id
-                WHERE ra.season = :season
-                ORDER BY ra.round, d.full_name
-            """),
-            {"season": season},
-        ).fetchall()
+    """Export championship win probability evolution after each round."""
+    from src.models.championship_predictor import predict_championship_evolution
 
-        # Team cumulative points
-        team_rows = session.execute(
-            sql_text("""
-                SELECT t.name, ra.round, SUM(r.points) as pts
-                FROM results r
-                JOIN teams t ON r.team_id = t.id
-                JOIN races ra ON r.race_id = ra.id
-                WHERE ra.season = :season
-                GROUP BY t.name, ra.round
-                ORDER BY ra.round, t.name
-            """),
-            {"season": season},
-        ).fetchall()
-
-    if not driver_rows:
+    data = predict_championship_evolution(season, n_simulations=2000)
+    if not data["wdc"] and not data["wcc"]:
         return
-
-    # Build driver cumulative points: {driver_name: [{round, points}]}
-    driver_cum: dict[str, dict[int, float]] = {}
-    for name, rnd, pts in driver_rows:
-        rnd = int(rnd)
-        if name not in driver_cum:
-            driver_cum[name] = {}
-        driver_cum[name][rnd] = driver_cum[name].get(rnd, 0) + (pts or 0)
-
-    # Convert to cumulative
-    wdc: dict[str, list[dict]] = {}
-    for name, round_pts in driver_cum.items():
-        cum = 0.0
-        entries = []
-        for rnd in sorted(round_pts.keys()):
-            cum += round_pts[rnd]
-            entries.append({"round": rnd, "points": round(cum, 1)})
-        wdc[name] = entries
-
-    # Build team cumulative points
-    team_cum: dict[str, dict[int, float]] = {}
-    for name, rnd, pts in team_rows:
-        rnd = int(rnd)
-        if name not in team_cum:
-            team_cum[name] = {}
-        team_cum[name][rnd] = (pts or 0)
-
-    wcc: dict[str, list[dict]] = {}
-    for name, round_pts in team_cum.items():
-        cum = 0.0
-        entries = []
-        for rnd in sorted(round_pts.keys()):
-            cum += round_pts[rnd]
-            entries.append({"round": rnd, "points": round(cum, 1)})
-        wcc[name] = entries
 
     _write_json(
         output_dir / str(season) / "standings_evolution.json",
-        {"wdc": wdc, "wcc": wcc},
+        data,
     )
 
 
