@@ -310,6 +310,9 @@ def export_round(season: int, round_num: int, output_dir: Path) -> None:
     # Live data
     _export_live_data(season, round_num, output_dir)
 
+    # Re-export races.json so has_live flag stays current
+    _export_races(season, output_dir)
+
 
 def _export_standings_evolution(season: int, output_dir: Path) -> None:
     """Export championship win probability evolution after each round."""
