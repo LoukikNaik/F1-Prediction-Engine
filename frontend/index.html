@@ -291,6 +291,31 @@ const TEAM_LOGOS = {
   "Audi":`${_F1_LOGO_BASE}/audi/2026audilogowhite.webp`,
   "Cadillac":`${_F1_LOGO_BASE}/cadillac/2026cadillaclogowhite.webp`
 };
+const _F1_DRIVER_BASE = "https://media.formula1.com/image/upload/c_lfill,w_27,h_27/q_auto/v1740000001/common/f1/2026";
+const DRIVER_HEADSHOTS = {
+  "Max Verstappen":`${_F1_DRIVER_BASE}/redbullracing/maxver01/2026redbullracingmaxver01right.webp`,
+  "Liam Lawson":`${_F1_DRIVER_BASE}/redbullracing/lialaw01/2026redbullracinglialaw01right.webp`,
+  "Lewis Hamilton":`${_F1_DRIVER_BASE}/ferrari/lewham01/2026ferrarilewham01right.webp`,
+  "Charles Leclerc":`${_F1_DRIVER_BASE}/ferrari/chalec01/2026ferrarichalec01right.webp`,
+  "Lando Norris":`${_F1_DRIVER_BASE}/mclaren/lannor01/2026mclarenlannor01right.webp`,
+  "Oscar Piastri":`${_F1_DRIVER_BASE}/mclaren/oscpia01/2026mclarenoscpia01right.webp`,
+  "George Russell":`${_F1_DRIVER_BASE}/mercedes/georus01/2026mercedesgeorus01right.webp`,
+  "Andrea Kimi Antonelli":`${_F1_DRIVER_BASE}/mercedes/andant01/2026mercedesandant01right.webp`,
+  "Fernando Alonso":`${_F1_DRIVER_BASE}/astonmartin/feralo01/2026astonmartinferalo01right.webp`,
+  "Lance Stroll":`${_F1_DRIVER_BASE}/astonmartin/lanstr01/2026astonmartinlanstr01right.webp`,
+  "Pierre Gasly":`${_F1_DRIVER_BASE}/alpine/piegas01/2026alpinepiegas01right.webp`,
+  "Jack Doohan":`${_F1_DRIVER_BASE}/alpine/jacdoo01/2026alpinejacdoo01right.webp`,
+  "Alexander Albon":`${_F1_DRIVER_BASE}/williams/alealb01/2026williamsalealb01right.webp`,
+  "Carlos Sainz":`${_F1_DRIVER_BASE}/williams/carsai01/2026williamscarsai01right.webp`,
+  "Yuki Tsunoda":`${_F1_DRIVER_BASE}/racingbulls/yuktsu01/2026racingbullsyuktsu01right.webp`,
+  "Isack Hadjar":`${_F1_DRIVER_BASE}/racingbulls/isahad01/2026racingbullsisahad01right.webp`,
+  "Esteban Ocon":`${_F1_DRIVER_BASE}/haasf1team/estoco01/2026haasf1teamestoco01right.webp`,
+  "Oliver Bearman":`${_F1_DRIVER_BASE}/haasf1team/olibea01/2026haasf1teamolibea01right.webp`,
+  "Nico Hulkenberg":`${_F1_DRIVER_BASE}/audi/nichul01/2026audinichul01right.webp`,
+  "Gabriel Bortoleto":`${_F1_DRIVER_BASE}/audi/gabbor01/2026audigabbor01right.webp`,
+  "Sergio Perez":`${_F1_DRIVER_BASE}/redbullracing/serper01/2026redbullracingserper01right.webp`,
+  "Daniel Ricciardo":`${_F1_DRIVER_BASE}/racingbulls/danric01/2026racingbullsdanric01right.webp`
+};
 const PLOTLY_LAYOUT_BASE = {
   paper_bgcolor:"transparent",plot_bgcolor:"transparent",
   font:{color:"#a0a8b4",size:11},
@@ -1076,13 +1101,33 @@ async function renderStandingsEvolution() {
     };
   });
 
+  // Build driver headshot images at first data point of each trace
+  const wdcMaxRound = Math.max(...Object.values(wdc).flatMap(e => e.map(x => x.round)), 1);
+  const wdcMaxProb = Math.max(...wdcTraces.flatMap(t => t.y), 1);
+  const wdcImages = topDrivers.map(name => {
+    const entries = wdc[name];
+    const url = DRIVER_HEADSHOTS[name];
+    if (!url || !entries.length) return null;
+    return {
+      source: url,
+      xref: "x", yref: "y",
+      x: entries[0].round,
+      y: entries[0].p1_prob * 100,
+      sizex: wdcMaxRound * 0.04,
+      sizey: wdcMaxProb * 0.08,
+      xanchor: "center", yanchor: "middle",
+      layer: "above"
+    };
+  }).filter(Boolean);
+
   Plotly.newPlot(wdcEl, wdcTraces, {
     ...PLOTLY_LAYOUT_BASE,
     height: 420,
     xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Round", dtick: 1},
     yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Win Probability (%)", rangemode: "tozero"},
     legend: {font: {size: 10}},
-    margin: {l: 60, r: 20, t: 10, b: 40}
+    margin: {l: 60, r: 20, t: 10, b: 40},
+    images: wdcImages
   }, {responsive: true, displayModeBar: false});
 
   // WCC chart — all teams with non-zero probability
@@ -1107,13 +1152,33 @@ async function renderStandingsEvolution() {
     };
   });
 
+  // Build team logo images at first data point of each trace
+  const wccMaxRound = Math.max(...Object.values(wcc).flatMap(e => e.map(x => x.round)), 1);
+  const wccMaxProb = Math.max(...wccTraces.flatMap(t => t.y), 1);
+  const wccImages = topTeams.map(name => {
+    const entries = wcc[name];
+    const url = TEAM_LOGOS[name];
+    if (!url || !entries.length) return null;
+    return {
+      source: url,
+      xref: "x", yref: "y",
+      x: entries[0].round,
+      y: entries[0].p1_prob * 100,
+      sizex: wccMaxRound * 0.04,
+      sizey: wccMaxProb * 0.08,
+      xanchor: "center", yanchor: "middle",
+      layer: "above"
+    };
+  }).filter(Boolean);
+
   Plotly.newPlot(wccEl, wccTraces, {
     ...PLOTLY_LAYOUT_BASE,
     height: 420,
     xaxis: {...PLOTLY_LAYOUT_BASE.xaxis, title: "Round", dtick: 1},
     yaxis: {...PLOTLY_LAYOUT_BASE.yaxis, title: "Win Probability (%)", rangemode: "tozero"},
     legend: {font: {size: 10}},
-    margin: {l: 60, r: 20, t: 10, b: 40}
+    margin: {l: 60, r: 20, t: 10, b: 40},
+    images: wccImages
   }, {responsive: true, displayModeBar: false});
 }
 
@@ -1352,6 +1417,12 @@ async function showCircuitTooltip(event) {
   }
 
   tip.innerHTML = html;
+
+  // Clamp bottom edge after content is rendered and height is known
+  const tipRect = tip.getBoundingClientRect();
+  if (tipRect.bottom > window.innerHeight - 8) {
+    tip.style.top = Math.max(window.innerHeight - tipRect.height - 8, 8) + "px";
+  }
 }
 
 function hideCircuitTooltip() {
