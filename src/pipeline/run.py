@@ -188,6 +188,78 @@ def schedule(
 
 
 @app.command()
+def backfill(
+    season: int = typer.Option(2025, help="Target season year"),
+    round: int = typer.Option(..., help="Target round number"),
+    lap_interval: int = typer.Option(3, help="Laps between predictions"),
+    simulations: int = typer.Option(5000, help="Monte Carlo simulations per lap"),
+    clear: bool = typer.Option(False, help="Clear existing live data before backfilling"),
+    export: bool = typer.Option(True, help="Export JSON for frontend after backfill"),
+):
+    """Backfill live lap predictions from historical FastF1 data."""
+    from src.models.backfill_predictor import run_backfill
+
+    success = run_backfill(
+        season=season,
+        round_num=round,
+        lap_interval=lap_interval,
+        n_sims=simulations,
+        clear_existing=clear,
+    )
+    if success and export:
+        from config.settings import PROJECT_ROOT
+        from src.export.json_exporter import export_round as _export_round
+
+        output_dir = PROJECT_ROOT / "frontend" / "data"
+        _export_round(season, round, output_dir)
+        logger.info(f"Exported JSON for {season} R{round}")
+
+
+@app.command(name="backfill-season")
+def backfill_season(
+    season: int = typer.Option(2025, help="Target season year"),
+    start_round: int = typer.Option(1, help="First round to backfill"),
+    end_round: int = typer.Option(24, help="Last round to backfill"),
+    lap_interval: int = typer.Option(5, help="Laps between predictions"),
+    simulations: int = typer.Option(5000, help="Monte Carlo simulations per lap"),
+    export: bool = typer.Option(True, help="Export JSON for frontend after each round"),
+):
+    """Backfill live predictions for all completed rounds in a season."""
+    from config.settings import PREDICTIONS_DIR, PROJECT_ROOT
+    from src.models.backfill_predictor import run_backfill
+
+    output_dir = PROJECT_ROOT / "frontend" / "data"
+    backfilled = 0
+
+    for rnd in range(start_round, end_round + 1):
+        # Check if a pre-race matrix exists for this round
+        has_matrix = any(
+            (PREDICTIONS_DIR / f"matrix_{season}_r{rnd}_{stage}.parquet").exists()
+            for stage in ["race_eve", "post_sprint", "post_qualifying", "pre_weekend"]
+        )
+        if not has_matrix:
+            logger.debug(f"Skipping R{rnd} — no pre-race matrix found")
+            continue
+
+        logger.info(f"Backfilling {season} R{rnd}...")
+        success = run_backfill(
+            season=season,
+            round_num=rnd,
+            lap_interval=lap_interval,
+            n_sims=simulations,
+            clear_existing=True,
+        )
+        if success:
+            backfilled += 1
+            if export:
+                from src.export.json_exporter import export_round as _export_round
+
+                _export_round(season, rnd, output_dir)
+
+    logger.info(f"Backfilled {backfilled} rounds for {season}")
+
+
+@app.command()
 def info():
     """Show database statistics."""
     from sqlalchemy import func

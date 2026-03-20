@@ -58,6 +58,9 @@ LIVE_MC_SIMULATIONS = 5_000
 LIVE_DASHBOARD_REFRESH = 30
 LIVE_PREDICTIONS_DIR = PREDICTIONS_DIR / "live"
 
+# Backfill settings
+BACKFILL_DEFAULT_LAP_INTERVAL = 3
+
 # Live data source: "openf1" (needs paid auth), "scraper" (web scraping, free)
 LIVE_DATA_SOURCE = "scraper"
 # Optional Firecrawl API for JS-rendered pages (self-hosted or cloud)

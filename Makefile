@@ -1,4 +1,4 @@
-.PHONY: setup pipeline dashboard train test lint clean matrix predict-aus predict-race predict-season championship backfill-weather migrate fetch-schedule live api serve export publish publish-round schedule
+.PHONY: setup pipeline dashboard train test lint clean matrix predict-aus predict-race predict-season championship backfill-weather migrate fetch-schedule live backfill backfill-season api serve export publish publish-round schedule
 
 SEASON ?= 2026
 ROUND ?= 1
@@ -72,6 +72,12 @@ matrix:
 
 live:
 	. .venv/bin/activate && python -m src.pipeline.run live --season $(SEASON) --round $(ROUND)
+
+backfill:
+	. .venv/bin/activate && python -m src.pipeline.run backfill --season $(SEASON) --round $(ROUND)
+
+backfill-season:
+	. .venv/bin/activate && python -m src.pipeline.run backfill-season --season $(SEASON)
 
 predict-aus:
 	. .venv/bin/activate && PYTHONPATH=. python scripts/predict_australia_2026.py
